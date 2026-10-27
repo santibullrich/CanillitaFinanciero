@@ -1,6 +1,7 @@
 import 'server-only';
 import { fetchQuotes, getCryptoTop, getDaily, getFx, getGrades, getIntraday, getNews, getProfile, search, getDayMovers, getMarketCaps, lastError } from './yahoo';
 import { supabaseAdmin } from './supabase/admin';
+import { finnhubError, fhRatios } from './finnhub';
 import { isoDaysAgo } from './technicals';
 
 export type Check = { name: string; ok: boolean; detail: string; fix?: string };
@@ -10,6 +11,7 @@ const ENV: [string, string][] = [
   ['NEXT_PUBLIC_SUPABASE_ANON_KEY', 'Usuarios y base de datos'],
   ['SUPABASE_SERVICE_ROLE_KEY', 'Caché de explicaciones y límite del asesor'],
   ['ANTHROPIC_API_KEY', 'Explicaciones y asesor con IA'],
+  ['FINNHUB_API_KEY', 'Ficha de empresa, ratios y analistas (Finnhub)'],
   ['NEXT_PUBLIC_LOGO_DEV_TOKEN', 'Logos'],
   ['NEXT_PUBLIC_SITE_URL', 'Links de confirmación de email (por ejemplo https://canillitafinanciero.vercel.app)']
 ];
@@ -52,11 +54,13 @@ export async function runChecks() {
     check('Más suben hoy (EE.UU.)', async () => count((await getDayMovers('day_gainers')).length)),
     check('Valor de mercado de acciones', async () => count(Object.keys(await getMarketCaps(['AAPL', 'MSFT'])).length, 'de 2')),
     check('Ficha de empresa y analistas', async () => { const p = await getProfile('AAPL'); const g = await getGrades('AAPL'); return { ok: !!p?.sector && !!g, detail: p?.sector ? `${p.sector}${g ? ` · ${g.strongBuy + g.buy} analistas dicen comprar` : ''}` : 'Sin datos' }; }),
+    check('Ratios: P/E y dividendo (KO)', async () => { const r = await fhRatios('KO'); return { ok: !!r, detail: r ? `P/E ${r.pe?.toFixed(1) ?? '–'} · dividendo ${r.dividendYield?.toFixed(1) ?? '–'}%` : 'Sin datos' }; }),
     check('Noticias', async () => count((await getNews('AAPL', 3)).length)),
     check('Gráfico del día', async () => count((await getIntraday('AAPL', '5min', isoDaysAgo(5))).length, 'puntos')),
     check('Histórico diario', async () => count((await getDaily('AAPL', isoDaysAgo(40))).length, 'días')),
     check('Tipos de cambio', async () => { const fx = await getFx(); const n = Object.keys(fx).length - 1; return { ok: n > 5, detail: fx.ARS ? `${n} monedas · 1 US$ = ${(1 / fx.ARS).toFixed(0)} pesos` : `${n} monedas` }; })
   ]);
+  if (finnhubError) data.push({ name: 'Último aviso de Finnhub', ok: false, detail: finnhubError, fix: 'Revisá FINNHUB_API_KEY en Vercel. Un 403 en un dato puntual (como el precio objetivo) significa que no entra en el plan gratis.' });
   if (lastError) data.push({ name: 'Último error', ok: false, detail: `${lastError.where}: ${lastError.message}`, fix: FIX });
 
   // Pruebas crudas de cada fuente gratis posible, para elegir la que funciona desde Vercel.

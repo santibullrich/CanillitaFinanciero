@@ -1,6 +1,7 @@
 import 'server-only';
 import yahooFinance from 'yahoo-finance2';
 import { unstable_cache } from 'next/cache';
+import { fhGrades, fhProfile, fhRatios, fhTarget } from './finnhub';
 
 /**
  * Datos de mercado gratis, sin clave.
@@ -277,13 +278,18 @@ const summaryCached = unstable_cache(async (symbol: string): Promise<any> => {
   }
 }, ['summary-v2'], { revalidate: 43200 });
 
+// Si Yahoo bloquea la ficha (429 desde Vercel), no se reintenta por 10 minutos para no frenar las páginas.
+let summaryBlockedUntil = 0;
 async function getSummary(symbol: string): Promise<any | null> {
-  if (/-USD$/.test(symbol)) return null;
-  try { return await summaryCached(symbol); } catch (e) { logError(`ficha ${symbol}`, e); return null; }
+  if (/-USD$/.test(symbol) || Date.now() < summaryBlockedUntil) return null;
+  try { return await summaryCached(symbol); } catch (e) { summaryBlockedUntil = Date.now() + 600_000; logError(`ficha ${symbol}`, e); return null; }
 }
 
 export type Profile = { symbol: string; name: string; description: string; sector: string; industry: string; country: string; currency: string; website: string; exchange: string; marketCap: number | null; beta: number | null };
 export async function getProfile(symbol: string): Promise<Profile | null> {
+  if (/-USD$/.test(symbol)) return null;
+  const f = await fhProfile(symbol);
+  if (f?.sector) return { symbol, description: '', ...f, name: f.name || symbol, currency: f.currency || 'USD' };
   const s = await getSummary(symbol);
   if (!s) return null;
   const p = s.price ?? {}, a = s.assetProfile ?? {}, d = s.summaryDetail ?? {}, k = s.defaultKeyStatistics ?? {};
@@ -296,6 +302,9 @@ export async function getProfile(symbol: string): Promise<Profile | null> {
 
 export type PriceTarget = { high: number | null; low: number | null; consensus: number | null; median: number | null };
 export async function getPriceTarget(symbol: string): Promise<PriceTarget | null> {
+  if (/-USD$/.test(symbol)) return null;
+  const t = await fhTarget(symbol);
+  if (t) return t;
   const f = (await getSummary(symbol))?.financialData;
   if (!f || num(f.targetMeanPrice) === null) return null;
   return { high: num(f.targetHighPrice), low: num(f.targetLowPrice), consensus: num(f.targetMeanPrice), median: num(f.targetMedianPrice) };
@@ -303,6 +312,9 @@ export async function getPriceTarget(symbol: string): Promise<PriceTarget | null
 
 export type Grades = { strongBuy: number; buy: number; hold: number; sell: number; strongSell: number; consensus: string };
 export async function getGrades(symbol: string): Promise<Grades | null> {
+  if (/-USD$/.test(symbol)) return null;
+  const g0 = await fhGrades(symbol);
+  if (g0) return g0;
   const s = await getSummary(symbol);
   const trend = s?.recommendationTrend?.trend ?? [];
   const t = trend.find((x: any) => x.period === '0m') ?? trend[0];
@@ -314,6 +326,9 @@ export async function getGrades(symbol: string): Promise<Grades | null> {
 
 export type Ratios = { pe: number | null; dividendYield: number | null };
 export async function getRatios(symbol: string): Promise<Ratios | null> {
+  if (/-USD$/.test(symbol)) return null;
+  const r = await fhRatios(symbol);
+  if (r) return r;
   const d = (await getSummary(symbol))?.summaryDetail;
   if (!d) return null;
   const dy = num(d.dividendYield ?? d.trailingAnnualDividendYield);

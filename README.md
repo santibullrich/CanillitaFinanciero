@@ -19,11 +19,12 @@ App web mobile first (Next.js 14) con:
 | --- | --- | --- |
 | [Supabase](https://supabase.com) | Usuarios, base de datos (lista, posiciones, caché de explicaciones) | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` |
 | Yahoo Finance (vía [yahoo-finance2](https://github.com/gadicc/node-yahoo-finance2)) | Precios, índices, cripto, analistas, noticias, gráficos. Gratis y sin clave | — |
+| [Finnhub](https://finnhub.io) | Ficha de cada empresa, P/E, dividendo, beta y opinión de analistas (plan gratis, 60 consultas por minuto) | `FINNHUB_API_KEY` |
 | [Claude API](https://console.anthropic.com) | Explicaciones y asesor | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_MODEL_FAST` |
 | [logo.dev](https://logo.dev) | Logos de empresas | `NEXT_PUBLIC_LOGO_DEV_TOKEN` (clave pública `pk_…`) |
 | [Vercel](https://vercel.com) | Publicar la app | — |
 
-Las claves `SUPABASE_SERVICE_ROLE_KEY` y `ANTHROPIC_API_KEY` son secretas: solo van en el servidor (Vercel) y nunca con el prefijo `NEXT_PUBLIC_`. La clave privada de logo.dev (`sk_…`) no se usa.
+Las claves `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY` y `FINNHUB_API_KEY` son secretas: solo van en el servidor (Vercel) y nunca con el prefijo `NEXT_PUBLIC_`. La clave privada de logo.dev (`sk_…`) no se usa.
 
 ## Puesta en marcha
 
