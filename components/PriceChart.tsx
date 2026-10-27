@@ -1,12 +1,13 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { nf } from '@/lib/format';
+import { useFx } from './Fx';
 
 type P = { t: string; p: number };
 const RANGES = ['1D', '1S', '1M', '1A'] as const;
 const LABEL: Record<string, string> = { '1D': 'hoy', '1S': 'en la semana', '1M': 'en el mes', '1A': 'en el año' };
 
-function Chart({ pts, range }: { pts: P[]; range: string }) {
+function Chart({ pts, range, rate = 1 }: { pts: P[]; range: string; rate?: number }) {
   const W = 640, H = 220, L = 6, R = 64, T = 12, B = 24, iw = W - L - R, ih = H - T - B;
   const vals = pts.map((x) => x.p);
   const mn = Math.min(...vals), mx = Math.max(...vals), pad = (mx - mn) * 0.08 || 1, lo = mn - pad, hi = mx + pad;
@@ -15,7 +16,7 @@ function Chart({ pts, range }: { pts: P[]; range: string }) {
   const col = `var(--${up ? 'up' : 'down'})`;
   const line = vals.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join('');
   const lx = x(vals.length - 1), ly = y(vals[vals.length - 1]);
-  const d = (v: number) => nf(v >= 1000 ? 0 : v < 1 ? 4 : 2).format(v);
+  const d = (v0: number) => { const v = v0 * rate; return nf(v >= 1000 ? 0 : v < 1 ? 4 : 2).format(v); };
   const tz = 'America/Argentina/Buenos_Aires';
   const fmtT = (t: string) => range === '1D' ? new Date(t).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: tz }) : new Date(t).toLocaleDateString('es-AR', range === '1A' ? { month: 'short', timeZone: tz } : { day: 'numeric', month: 'short', timeZone: tz });
   const ticks = [0, Math.floor((pts.length - 1) / 2), pts.length - 1];
@@ -32,7 +33,9 @@ function Chart({ pts, range }: { pts: P[]; range: string }) {
   );
 }
 
-export default function PriceChart({ symbol }: { symbol: string }) {
+export default function PriceChart({ symbol, currency }: { symbol: string; currency?: string }) {
+  const fx = useFx();
+  const rate = currency && currency !== 'USD' ? fx[currency] ?? 1 : 1;
   const [range, setRange] = useState<string>('1D');
   const [pts, setPts] = useState<P[] | null>(null);
   useEffect(() => {
@@ -51,7 +54,7 @@ export default function PriceChart({ symbol }: { symbol: string }) {
       <div className="chartbox">
         {pts === null ? <p className="note" style={{ padding: 40, textAlign: 'center' }}>Cargando gráfico…</p>
           : pts.length < 2 ? <p className="note" style={{ padding: 40, textAlign: 'center' }}>No hay datos para este período.</p>
-          : <Chart pts={pts} range={range} />}
+          : <Chart pts={pts} range={range} rate={rate} />}
       </div>
     </div>
   );

@@ -255,8 +255,8 @@ export async function getIntraday(symbol: string, interval: '5min' | '1hour', fr
 
 /** Tipos de cambio: cuántos dólares vale 1 unidad de cada moneda. */
 export async function getFx(): Promise<Record<string, number>> {
-  const direct = ['EUR', 'GBP', 'AUD'];
-  const inverse = ['JPY', 'HKD', 'BRL', 'ARS', 'CHF', 'CNY', 'CAD', 'MXN', 'KRW', 'INR', 'TWD'];
+  const direct = ['EUR', 'GBP', 'AUD', 'NZD'];
+  const inverse = ['JPY', 'HKD', 'BRL', 'ARS', 'CHF', 'CNY', 'CAD', 'MXN', 'KRW', 'INR', 'TWD', 'SEK', 'DKK', 'NOK', 'SGD', 'ZAR', 'ILS', 'PLN', 'TRY', 'CLP', 'COP', 'PEN', 'IDR', 'THB', 'MYR', 'PHP', 'SAR'];
   const qs = await getQuotes([...direct.map((c) => `${c}USD=X`), ...inverse.map((c) => `${c}=X`)], 300);
   const fx: Record<string, number> = { USD: 1 };
   for (const q of qs) {
@@ -264,7 +264,10 @@ export async function getFx(): Promise<Record<string, number>> {
     if (!m || !q.price) continue;
     fx[m[1]] = m[2] ? q.price : 1 / q.price;
   }
+  // Bolsas que cotizan en centavos: Londres (peniques), Johannesburgo y Tel Aviv.
   if (fx.GBP) fx.GBp = fx.GBP / 100;
+  if (fx.ZAR) fx.ZAc = fx.ZAR / 100;
+  if (fx.ILS) fx.ILA = fx.ILS / 100;
   return fx;
 }
 

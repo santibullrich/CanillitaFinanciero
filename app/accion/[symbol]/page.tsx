@@ -7,9 +7,9 @@ import LivePrice from '@/components/LivePrice';
 import Logo from '@/components/Logo';
 import PriceChart from '@/components/PriceChart';
 import { LiveProvider } from '@/components/Live';
-import { getGrades, getPriceTarget, getProfile, getQuote, getRatios } from '@/lib/yahoo';
+import { getFx, getGrades, getPriceTarget, getProfile, getQuote, getRatios } from '@/lib/yahoo';
 import { marketById, marketOfSymbol } from '@/lib/markets';
-import { bigNum, fmtCap, fmtPrice, nf } from '@/lib/format';
+import { bigNum, fmtCap, fmtUsd, nf, toUsd } from '@/lib/format';
 import { supabaseServer } from '@/lib/supabase/server';
 
 export const revalidate = 60;
@@ -26,17 +26,20 @@ export default async function StockPage({ params }: { params: { symbol: string }
   const mId = marketOfSymbol(symbol, quote.exchange);
   const crypto = mId === 'cr';
   const m = marketById(mId) ?? { id: 'xx', name: 'Otros mercados', currency: 'USD' };
-  const [profile, ratios, grades, target] = await Promise.all([
+  const [profile, ratios, grades, target, fx] = await Promise.all([
     getProfile(symbol).catch(() => null),
     crypto ? null : getRatios(symbol).catch(() => null),
     crypto ? null : getGrades(symbol).catch(() => null),
-    crypto ? null : getPriceTarget(symbol).catch(() => null)
+    crypto ? null : getPriceTarget(symbol).catch(() => null),
+    getFx().catch(() => ({ USD: 1 }) as Record<string, number>)
   ]);
   let loggedIn = false;
   try { loggedIn = !!(await supabaseServer().auth.getUser()).data.user; } catch { /* sin Supabase */ }
 
   const cur = quote.currency || profile?.currency || m.currency;
   const up = quote.changePct >= 0;
+  const px = (v: number | null | undefined) => fmtUsd(v, cur, fx);
+  const capUsd = toUsd(quote.marketCap ?? profile?.marketCap, cur, fx);
   const buy = grades ? grades.strongBuy + grades.buy : 0;
   const total = grades ? buy + grades.hold + grades.sell + grades.strongSell : 0;
   const tenths = total ? Math.round((buy / total) * 10) : 0;
@@ -59,7 +62,7 @@ export default async function StockPage({ params }: { params: { symbol: string }
           <LivePrice symbol={symbol} price={quote.price} changePct={quote.changePct} currency={cur} />
           <div className="stock-actions"><FollowButton symbol={symbol} loggedIn={loggedIn} /><Link className="pl-link" href={`/cartera?agregar=${encodeURIComponent(symbol)}`}>Cargar en mi cartera</Link></div>
         </div>
-        <PriceChart symbol={symbol} />
+        <PriceChart symbol={symbol} currency={cur} />
       </div></div></section>
 
       <main className="wrap">
@@ -76,7 +79,7 @@ export default async function StockPage({ params }: { params: { symbol: string }
                 <div className="votes">{Array.from({ length: 10 }, (_, i) => <i key={i} className={i < tenths ? 'y' : ''} />)}</div>
                 <p className="src">{buy} dicen comprar · {grades!.hold} dicen esperar · {grades!.sell + grades!.strongSell} dicen vender</p></div>
               {tgt && upside != null && (
-                <div className="panel"><p className="say">Creen que en un año podría valer <span className="pl-num" style={{ fontSize: '.8em' }}>{fmtPrice(tgt, cur)}</span>, {upside >= 0 ? <><mark className="pl-hl" style={{ animation: 'none', backgroundSize: '100% 64%' }}>{nf(0).format(upside * 100)}% más</mark> que hoy</> : <>un {nf(0).format(-upside * 100)}% menos que hoy</>}.</p>
+                <div className="panel"><p className="say">Creen que en un año podría valer <span className="pl-num" style={{ fontSize: '.8em' }}>{px(tgt)}</span>, {upside >= 0 ? <><mark className="pl-hl" style={{ animation: 'none', backgroundSize: '100% 64%' }}>{nf(0).format(upside * 100)}% más</mark> que hoy</> : <>un {nf(0).format(-upside * 100)}% menos que hoy</>}.</p>
                   <div className="target"><div className="rail2" /><div className="seg" style={{ left: `${Math.min(+pos(quote.price), +pos(tgt))}%`, width: `${Math.abs(+pos(tgt) - +pos(quote.price))}%` }} />
                     <div className="mk" style={{ left: `${pos(quote.price)}%` }}>Hoy<i style={{ background: 'var(--ink)' }} /></div><div className="mk" style={{ left: `${pos(tgt)}%` }}>Objetivo<i style={{ background: 'var(--up)' }} /></div></div></div>
               )}
@@ -95,9 +98,9 @@ export default async function StockPage({ params }: { params: { symbol: string }
 
         <section className="sec facts"><div className="sechead"><span className="pl-eyebrow">Para los curiosos</span><h2>Datos clave, explicados</h2></div>
           <div className="pl-list">
-            {quote.dayLow != null && quote.dayHigh != null && <div className="pl-row"><span className="k">Rango de hoy</span><span className="v">{fmtPrice(quote.dayLow, cur)} – {fmtPrice(quote.dayHigh, cur)}</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>Lo más bajo y lo más alto que tocó en el día.</span></div>}
-            {quote.yearLow != null && quote.yearHigh != null && <div className="pl-row"><span className="k">Rango del último año</span><span className="v">{fmtPrice(quote.yearLow, cur)} – {fmtPrice(quote.yearHigh, cur)}</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>Te muestra si hoy está cerca de su piso o de su techo.</span></div>}
-            {quote.marketCap != null && <div className="pl-row"><span className="k">Valor de mercado</span><span className="v">{cur === 'USD' ? fmtCap(quote.marketCap) : `${bigNum(quote.marketCap)} (${cur})`}</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>{crypto ? 'Lo que valen juntas todas las monedas que existen.' : 'Lo que vale la empresa entera en la bolsa.'}</span></div>}
+            {quote.dayLow != null && quote.dayHigh != null && <div className="pl-row"><span className="k">Rango de hoy</span><span className="v">{px(quote.dayLow)} – {px(quote.dayHigh)}</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>Lo más bajo y lo más alto que tocó en el día.</span></div>}
+            {quote.yearLow != null && quote.yearHigh != null && <div className="pl-row"><span className="k">Rango del último año</span><span className="v">{px(quote.yearLow)} – {px(quote.yearHigh)}</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>Te muestra si hoy está cerca de su piso o de su techo.</span></div>}
+            {(quote.marketCap ?? profile?.marketCap) != null && <div className="pl-row"><span className="k">Valor de mercado</span><span className="v">{capUsd != null ? fmtCap(capUsd) : `${bigNum((quote.marketCap ?? profile?.marketCap)!)} (${cur})`}</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>{crypto ? 'Lo que valen juntas todas las monedas que existen.' : 'Lo que vale la empresa entera en la bolsa.'}</span></div>}
             {ratios?.pe != null && ratios.pe > 0 && <div className="pl-row"><span className="k">Precio / ganancia</span><span className="v">{nf(1).format(ratios.pe)} años</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>Cuántos años de ganancias pagás al comprarla. Menos suele ser más barato.</span></div>}
             {ratios?.dividendYield != null && ratios.dividendYield > 0 && <div className="pl-row"><span className="k">Dividendo</span><span className="v">{nf(1).format(ratios.dividendYield)}% al año</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>Lo que reparte por año a sus accionistas, sobre el precio de hoy.</span></div>}
             {quote.volume != null && <div className="pl-row"><span className="k">{crypto ? 'Operado hoy' : 'Acciones que cambiaron de mano'}</span><span className="v">{nf(1).format(quote.volume / 1e6)} M</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>Mucho movimiento indica interés o una noticia fuerte.</span></div>}

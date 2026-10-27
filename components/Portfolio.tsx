@@ -151,7 +151,7 @@ export default function Portfolio({ userId, nombre, preset }: { userId: string; 
               {calc.rows.map((r) => (
                 <div className="pf-row" key={r.p.id}>
                   <Link className="who" href={symbolPath(r.p.symbol)}><Logo symbol={r.p.symbol} name={r.p.name ?? r.p.symbol} crypto={r.m === 'cr'} />
-                    <span><span className="pl-name">{r.p.name ?? r.p.symbol}</span><span className="pl-meta"><Flag id={r.m} />{nf(r.p.quantity % 1 ? 4 : 0).format(r.p.quantity)} × compraste a {fmtPrice(r.p.buy_price, r.p.currency)}</span></span>
+                    <span><span className="pl-name">{r.p.name ?? r.p.symbol}</span><span className="pl-meta"><Flag id={r.m} />{nf(r.p.quantity % 1 ? 4 : 0).format(r.p.quantity)} × compraste a {fx[r.p.currency] && r.p.currency !== 'USD' ? fmtPrice(r.p.buy_price * fx[r.p.currency], 'USD') : fmtPrice(r.p.buy_price, r.p.currency)}</span></span>
                   </Link>
                   <div className="right"><b className="pl-num">{usd(r.v)}</b><span className={`pl-num pl-${dir(r.pnl)}`}>{usdSigned(r.pnl)} · {fmtPct(r.pct)}</span></div>
                   <div className="day"><span>Hoy <b className={`pl-num pl-${dir(r.d)}`}>{usdSigned(r.d)}</b>{!r.live && ' · sin precio en vivo'}</span>

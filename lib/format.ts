@@ -9,6 +9,18 @@ export function fmtPrice(v: number | null | undefined, cur = 'USD') {
   if (cur === 'GBp') return `${nf(d).format(v)} p`; // Londres cotiza en peniques
   return `${SYM[cur] ?? cur} ${nf(d).format(v)}`;
 }
+/** Pasa un precio a dólares con los tipos de cambio del día. Null si no hay cotización de esa moneda. */
+export function toUsd(v: number | null | undefined, cur: string, fx: Record<string, number>) {
+  if (v == null || !isFinite(v)) return null;
+  if (!cur || cur === 'USD') return v;
+  const r = fx[cur];
+  return r ? v * r : null;
+}
+/** Precio en dólares; si no hay tipo de cambio para esa moneda, queda en la moneda original. */
+export function fmtUsd(v: number | null | undefined, cur: string, fx: Record<string, number>) {
+  const u = toUsd(v, cur, fx);
+  return u == null ? fmtPrice(v, cur) : fmtPrice(u, 'USD');
+}
 export const fmtPct = (c: number | null | undefined) =>
   c == null || !isFinite(c) ? '—' : (c > 0 ? '+' : c < 0 ? '−' : '') + nf(Math.abs(c) >= 10 ? 1 : 2).format(Math.abs(c)) + '%';
 export const absPct = (c: number) => nf(Math.abs(c) >= 10 ? 1 : 2).format(Math.abs(c)) + '%';

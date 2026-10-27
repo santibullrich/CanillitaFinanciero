@@ -4,7 +4,8 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import { themeInit } from '@/components/ThemeToggle';
 import { supabaseServer } from '@/lib/supabase/server';
-import { getQuotes } from '@/lib/yahoo';
+import { getFx, getQuotes } from '@/lib/yahoo';
+import { FxProvider } from '@/components/Fx';
 import { MARKETS } from '@/lib/markets';
 import { dir, fmtPct, nf } from '@/lib/format';
 
@@ -34,7 +35,7 @@ async function Tape() {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const user = await currentUser();
+  const [user, fx] = await Promise.all([currentUser(), getFx().catch(() => ({ USD: 1 }) as Record<string, number>)]);
   const nombre = (user?.user_metadata?.nombre as string) || (user?.email?.split('@')[0] ?? null);
   const date = new Date().toLocaleDateString('es-AR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'America/Argentina/Buenos_Aires' }).toUpperCase();
   return (
@@ -46,6 +47,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800;900&family=Martian+Mono:wght@400;600&family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" />
       </head>
       <body>
+        <FxProvider rates={fx}>
         <Header name={user ? nombre : null} />
         <div className="dateline-band"><div className="wrap"><div className="pl-dateline"><span>{date} · BUENOS AIRES</span><span>Edición en vivo</span></div></div></div>
         <Tape />
@@ -57,8 +59,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <span className="pl-wordmark"><i /><span className="stack"><b>Canillita</b><span>Financiero</span></span></span>
           <p className="bajada">Todas las noticias del mercado mundial, contadas para que las entiendan Don Carlos y Doña Rosa.</p>
           <p>Nada de lo que ves es un consejo de inversión. Antes de invertir, informate y elegí lo que tenga sentido para vos. Los precios pueden tener demora según la bolsa.</p>
-          <p>Datos de mercado: Yahoo Finance (pueden tener demora). <a href="https://logo.dev" target="_blank" rel="noopener noreferrer">Logos provistos por Logo.dev</a>.</p>
+          <p>Datos de mercado: Yahoo Finance (pueden tener demora). Los precios se muestran en dólares al tipo de cambio del momento. <a href="https://logo.dev" target="_blank" rel="noopener noreferrer">Logos provistos por Logo.dev</a>.</p>
         </div></footer>
+        </FxProvider>
       </body>
     </html>
   );

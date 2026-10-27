@@ -17,7 +17,7 @@ export default async function ThemePage({ params }: { params: { id: string } }) 
   const qs = (await getQuotes(t.symbols, 60).catch(() => [])).sort((a, b) => b.changePct - a.changePct);
   const avg = qs.length ? qs.reduce((a, q) => a + q.changePct, 0) / qs.length : 0;
   const ups = qs.filter((q) => q.changePct > 0).length;
-  const rows = qs.map((q) => { const m = marketOfSymbol(q.symbol, q.exchange); return { symbol: q.symbol, name: q.name, price: q.price, changePct: q.changePct, market: m, currency: marketById(m)?.currency ?? 'USD' }; });
+  const rows = qs.map((q) => { const m = marketOfSymbol(q.symbol, q.exchange); return { symbol: q.symbol, name: q.name, price: q.price, changePct: q.changePct, market: m, currency: q.currency || marketById(m)?.currency || 'USD' }; });
   return (
     <LiveProvider symbols={t.symbols}>
       <section className="pl-atmo heroband"><div className="pl-hero"><div className="hero-grid">

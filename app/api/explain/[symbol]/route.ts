@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDaily, getGrades, getNews, getPriceTarget, getProfile, getQuote, getRatios } from '@/lib/yahoo';
+import { getDaily, getFx, getGrades, getNews, getPriceTarget, getProfile, getQuote, getRatios } from '@/lib/yahoo';
 import { aiEnabled, askJSON, MODEL } from '@/lib/ai';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 import { isoDaysAgo, technicals } from '@/lib/technicals';
@@ -62,22 +62,25 @@ export async function GET(_req: Request, { params }: { params: { symbol: string 
   const mId = marketOfSymbol(symbol, quote.exchange);
   const market = marketById(mId);
   const crypto = mId === 'cr';
-  const [news, grades, target, ratios, profile, daily, index] = await Promise.all([
+  const [news, grades, target, ratios, profile, daily, index, fx] = await Promise.all([
     getNews(symbol, 8),
     crypto ? null : getGrades(symbol),
     crypto ? null : getPriceTarget(symbol),
     crypto ? null : getRatios(symbol),
     crypto ? null : getProfile(symbol),
     getDaily(symbol, isoDaysAgo(370)),
-    market && market.index !== symbol ? getQuote(market.index) : Promise.resolve(null)
+    market && market.index !== symbol ? getQuote(market.index) : Promise.resolve(null),
+    getFx().catch(() => ({ USD: 1 }) as Record<string, number>)
   ]);
+  const rate = quote.currency === 'USD' ? 1 : fx[quote.currency] ?? null;
+  const usd = (v: number | null | undefined) => (v == null || rate == null ? null : Math.round(v * rate * 100) / 100);
   const t = technicals(daily, quote.price);
   const sources = news.slice(0, 5).map((n) => ({ title: n.title, site: n.site, url: n.url }));
 
   const totalG = grades ? grades.strongBuy + grades.buy + grades.hold + grades.sell + grades.strongSell : 0;
   const datos = {
     activo: { nombre: quote.name, ticker: symbol, mercado: market?.name ?? 'Otros', rubro: crypto ? 'Cripto' : profile?.sector ? sectorEs(profile.sector) : null, moneda: quote.currency },
-    hoy: { cambio_pct: r1(quote.changePct), precio: quote.price, cierre_anterior: quote.previousClose, minimo_dia: quote.dayLow, maximo_dia: quote.dayHigh },
+    hoy: { cambio_pct: r1(quote.changePct), precio_usd: usd(quote.price), cierre_anterior_usd: usd(quote.previousClose), minimo_dia_usd: usd(quote.dayLow), maximo_dia_usd: usd(quote.dayHigh), precio_en_moneda_local: rate === 1 ? null : quote.price },
     mercado: index ? { indice: market?.indexName, cambio_pct_hoy: r1(index.changePct) } : null,
     tecnico: {
       rendimiento_1_mes_pct: t.ret1m, rendimiento_1_anio_pct: t.ret1y, distancia_al_maximo_anual_pct: t.distHigh1y, distancia_al_minimo_anual_pct: t.distLow1y,
@@ -86,7 +89,7 @@ export async function GET(_req: Request, { params }: { params: { symbol: string 
     fundamentos: crypto ? null : { pe: r1(ratios?.pe), dividendo_pct: r1(ratios?.dividendYield), beta: r1(profile?.beta) },
     analistas: crypto || !totalG ? null : {
       cantidad: totalG, dicen_comprar: grades!.strongBuy + grades!.buy, dicen_mantener: grades!.hold, dicen_vender: grades!.sell + grades!.strongSell,
-      precio_objetivo: target?.consensus ?? null, potencial_pct: target?.consensus && quote.price ? r1((target.consensus / quote.price - 1) * 100) : null
+      precio_objetivo_usd: usd(target?.consensus), potencial_pct: target?.consensus && quote.price ? r1((target.consensus / quote.price - 1) * 100) : null
     },
     noticias: news.map((n) => ({ titulo: n.title, fuente: n.site, fecha: n.date.slice(0, 10) }))
   };
@@ -117,6 +120,7 @@ Reglas:
 - Ordená los motivos del más al menos importante. Citá números concretos.
 - Si las noticias no explican el movimiento, decilo con honestidad y apoyate en el mercado y el técnico.
 - Español rioplatense con voseo, frases cortas, sin jerga. Si usás un término técnico (RSI, P/E, media móvil), explicalo en pocas palabras.
+- Si mencionás precios, usá dólares (los campos _usd), escritos como US$.
 - No recomiendes comprar ni vender.
 
 Datos (JSON):
