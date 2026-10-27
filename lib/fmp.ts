@@ -117,7 +117,7 @@ export async function search(query: string): Promise<SearchHit[]> {
   return out.slice(0, 12);
 }
 
-export type Profile = { symbol: string; name: string; description: string; sector: string; industry: string; country: string; currency: string; website: string; exchange: string; marketCap: number | null };
+export type Profile = { symbol: string; name: string; description: string; sector: string; industry: string; country: string; currency: string; website: string; exchange: string; marketCap: number | null; beta: number | null };
 
 export async function getProfile(symbol: string): Promise<Profile | null> {
   const r = await fmp<any[]>('/profile', { symbol }, 86400).catch(() => []);
@@ -125,7 +125,7 @@ export async function getProfile(symbol: string): Promise<Profile | null> {
   if (!p) return null;
   return {
     symbol: p.symbol, name: p.companyName ?? p.symbol, description: p.description ?? '', sector: p.sector ?? '', industry: p.industry ?? '',
-    country: p.country ?? '', currency: p.currency ?? 'USD', website: p.website ?? '', exchange: p.exchange ?? p.exchangeShortName ?? '', marketCap: num(p.marketCap ?? p.mktCap)
+    country: p.country ?? '', currency: p.currency ?? 'USD', website: p.website ?? '', exchange: p.exchange ?? p.exchangeShortName ?? '', marketCap: num(p.marketCap ?? p.mktCap), beta: num(p.beta)
   };
 }
 

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { getDaily, getFx, getGrades, getPriceTarget, getQuotes, getRatios, type Quote } from '@/lib/fmp';
+import { getDaily, getFx, getGrades, getPriceTarget, getProfile, getQuotes, getRatios, type Quote } from '@/lib/fmp';
+import { riskLevel, sectorEs } from '@/lib/sectors';
 import { isoDaysAgo, technicals } from '@/lib/technicals';
 import { aiEnabled, askJSON, askText, MODEL } from '@/lib/ai';
 import { UNIVERSE, THEMES } from '@/lib/themes';
@@ -12,7 +13,7 @@ export const maxDuration = 120;
 const r1 = (v: number) => Math.round(v * 10) / 10;
 
 const RULES = `Sos el estratega de inversiones de CanillitaFinanciero, una app argentina para gente común. Hablá en español rioplatense con voseo, claro y directo. Si usás un término técnico (RSI, P/E, media móvil), explicalo en pocas palabras la primera vez. Sin markdown ni emojis.
-No describas la cartera: el usuario ya la ve. Tu trabajo es encontrar sus debilidades y proponer cómo rotarla.
+No describas la cartera: el usuario ya la ve. Tu trabajo es encontrar sus debilidades y proponer cómo rotarla. Mirá especialmente el reparto por tipo (acciones y cripto), por nivel de riesgo y por rubro: una cartera con empresas globales no se diversifica por país sino por rubro y riesgo.
 Usá SOLO los datos que te paso: fundamentos (P/E, consenso de analistas, potencial al precio objetivo, dividendo) y análisis técnico (rendimiento 1 mes y 1 año, distancia al máximo y mínimo anual, si está sobre sus medias de 50 y 200 días, RSI de 14 días: más de 70 = sobrecomprada, menos de 30 = sobrevendida; volatilidad anual). Citá los números. Solo podés proponer tickers que estén en "universo".`;
 
 const SHAPE = `Formato JSON:
@@ -91,17 +92,27 @@ export async function POST(req: Request) {
     };
   });
 
+  const profiles = new Map(await Promise.all(Array.from(new Set<string>(held)).map(async (s: string) => [s, await getProfile(s).catch(() => null)] as const)));
   let total = 0;
+  const byType: Record<string, number> = {}, byRisk: Record<string, number> = {}, bySec: Record<string, number> = {};
   const rows = positions.map((p: any) => {
     const quote = q.get(p.symbol);
     const rate = fx[p.currency] ?? 1;
     const value = quote ? Number(p.quantity) * quote.price * rate : 0;
     const cost = Number(p.quantity) * Number(p.buy_price) * rate;
     total += value;
+    const prof = profiles.get(p.symbol);
+    const crypto = marketOfSymbol(p.symbol, quote?.exchange) === 'cr';
+    const add = (o: Record<string, number>, k: string) => { o[k] = (o[k] ?? 0) + value; };
+    add(byType, crypto ? 'Cripto' : 'Acciones');
+    add(byRisk, riskLevel(prof?.beta, crypto));
+    add(bySec, crypto ? 'Cripto' : sectorEs(prof?.sector));
     return { ticker: p.symbol, nombre: quote?.name ?? p.name, value, cost };
   });
+  const pct = (o: Record<string, number>) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, total ? r1((v / total) * 100) : 0]));
   const cartera = {
     valor_total_usd: Math.round(total),
+    reparto_pct: { por_tipo: pct(byType), por_riesgo: pct(byRisk), por_rubro: pct(bySec) },
     posiciones: rows.map((r) => ({ ticker: r.ticker, nombre: r.nombre, peso_pct: total ? r1((r.value / total) * 100) : 0, ganancia_pct: r.cost ? r1((r.value / r.cost - 1) * 100) : 0 }))
   };
   const data = `Datos (JSON):\n${JSON.stringify({ cartera, universo: universe })}`;

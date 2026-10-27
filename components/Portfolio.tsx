@@ -8,7 +8,8 @@ import Logo from './Logo';
 import Search from './Search';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { dir, fmtPct, fmtPrice, nf, symbolPath, usd, usdSigned, SYM } from '@/lib/format';
-import { MARKETS, marketOfSymbol } from '@/lib/markets';
+import { marketOfSymbol } from '@/lib/markets';
+import { RISK_LEVELS } from '@/lib/sectors';
 
 type Position = { id: string; symbol: string; name: string | null; currency: string; quantity: number; buy_price: number; bought_at: string };
 type Q = { symbol: string; name: string; price: number; changePct: number; previousClose: number | null; exchange: string };
@@ -28,6 +29,7 @@ export default function Portfolio({ userId, nombre, preset }: { userId: string; 
   const [formErr, setFormErr] = useState('');
   const [loadErr, setLoadErr] = useState('');
   const [confirm, setConfirm] = useState<string | null>(null);
+  const [meta, setMeta] = useState<Record<string, { sector: string; risk: string; crypto: boolean }>>({});
 
   const load = useCallback(async () => {
     const [p, w] = await Promise.all([
@@ -59,6 +61,12 @@ export default function Portfolio({ userId, nombre, preset }: { userId: string; 
     const t = setInterval(refresh, 20_000);
     return () => { alive = false; clearInterval(t); };
   }, [symbols]);
+
+  const held = useMemo(() => Array.from(new Set((positions ?? []).map((p) => p.symbol))).sort().join(','), [positions]);
+  useEffect(() => {
+    if (!held) return;
+    fetch(`/api/profiles?symbols=${encodeURIComponent(held)}`).then((r) => r.json()).then((j) => setMeta((m) => ({ ...m, ...j }))).catch(() => {});
+  }, [held]);
 
   const pick = useCallback(async (h: { symbol: string; name: string; market?: string; currency?: string }) => {
     const market = h.market ?? marketOfSymbol(h.symbol);
@@ -101,7 +109,7 @@ export default function Portfolio({ userId, nombre, preset }: { userId: string; 
 
   const calc = useMemo(() => {
     let val = 0, cost = 0, day = 0;
-    const by: Record<string, number> = {};
+    const byType: Record<string, number> = { Acciones: 0, Cripto: 0 }, byRisk: Record<string, number> = {}, bySec: Record<string, number> = {};
     const rows = (positions ?? []).map((p) => {
       const q = quotes[p.symbol];
       const rate = fx[p.currency] ?? 1;
@@ -110,11 +118,17 @@ export default function Portfolio({ userId, nombre, preset }: { userId: string; 
       const v = p.quantity * px * rate, c = p.quantity * p.buy_price * rate, d = p.quantity * (px - prev) * rate;
       val += v; cost += c; day += d;
       const m = marketOfSymbol(p.symbol, q?.exchange);
-      by[m] = (by[m] ?? 0) + v;
+      const info = meta[p.symbol];
+      const crypto = info?.crypto ?? m === 'cr';
+      byType[crypto ? 'Cripto' : 'Acciones'] += v;
+      const rk = info?.risk ?? (crypto ? 'Muy alto' : 'Medio');
+      byRisk[rk] = (byRisk[rk] ?? 0) + v;
+      const sec = info?.sector ?? (crypto ? 'Cripto' : 'Sin rubro');
+      bySec[sec] = (bySec[sec] ?? 0) + v;
       return { p, q, v, c, d, m, pnl: v - c, pct: c ? ((v - c) / c) * 100 : 0, live: !!q };
     });
-    return { rows, val, cost, day, by, pnl: val - cost, pct: cost ? ((val - cost) / cost) * 100 : 0, dpct: val - day > 0 ? (day / (val - day)) * 100 : 0 };
-  }, [positions, quotes, fx]);
+    return { rows, val, cost, day, byType, byRisk, bySec, pnl: val - cost, pct: cost ? ((val - cost) / cost) * 100 : 0, dpct: val - day > 0 ? (day / (val - day)) * 100 : 0 };
+  }, [positions, quotes, fx, meta]);
 
   return (
     <>
@@ -148,13 +162,24 @@ export default function Portfolio({ userId, nombre, preset }: { userId: string; 
           ) : (
             <div className="panel empty"><p className="say">Todavía no cargaste posiciones.</p><p className="src">Abajo buscás una acción o cripto de cualquier bolsa del mundo, ponés cuántas tenés y a qué precio las compraste.</p></div>
           )}
-          {calc.rows.length > 0 && calc.val > 0 && (
-            <div className="alloc"><span className="pl-eyebrow">Cómo está repartida</span>
-              {Object.entries(calc.by).sort((a, b) => b[1] - a[1]).map(([id, v]) => (
-                <div className="arow" key={id}><span><Flag id={id} />{MARKETS.find((m) => m.id === id)?.name ?? id}</span><span className="track"><i style={{ width: `${(v / calc.val) * 100}%` }} /></span><b className="pl-num">{nf(0).format((v / calc.val) * 100)}%</b></div>
-              ))}
-            </div>
-          )}
+          {calc.rows.length > 0 && calc.val > 0 && (() => {
+            const pct = (v: number) => (v / calc.val) * 100;
+            const bars = (obj: Record<string, number>, order?: readonly string[]) =>
+              (order ? [...order] : Object.keys(obj).sort((a, b) => obj[b] - obj[a])).filter((k) => (obj[k] ?? 0) > 0).map((k) => (
+                <div className="arow" key={k}><span>{k}</span><span className="track"><i style={{ width: `${pct(obj[k])}%` }} /></span><b className="pl-num">{nf(0).format(pct(obj[k]))}%</b></div>
+              ));
+            const st = pct(calc.byType.Acciones), cr = pct(calc.byType.Cripto);
+            return (
+              <div className="alloc3">
+                <div className="alloc"><span className="pl-eyebrow">Acciones y cripto</span>
+                  <div className="split-bar" role="img" aria-label={`${nf(0).format(st)}% en acciones y ${nf(0).format(cr)}% en cripto`}><i className="st" style={{ width: `${st}%` }} /><i className="cr" style={{ width: `${cr}%` }} /></div>
+                  <div className="split-leg"><span><i className="st" />Acciones <b className="pl-num">{nf(0).format(st)}%</b></span><span><i className="cr" />Cripto <b className="pl-num">{nf(0).format(cr)}%</b></span></div>
+                </div>
+                <div className="alloc"><span className="pl-eyebrow">Por nivel de riesgo</span>{bars(calc.byRisk, RISK_LEVELS)}<p className="note">Según cuánto se mueve cada acción comparada con el mercado. Toda la cripto cuenta como riesgo muy alto.</p></div>
+                <div className="alloc"><span className="pl-eyebrow">Por rubro</span>{bars(calc.bySec)}</div>
+              </div>
+            );
+          })()}
         </section>
 
         <section className="sec" id="cargar">
