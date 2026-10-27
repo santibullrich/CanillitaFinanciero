@@ -11,6 +11,32 @@ export const maxDuration = 60;
 type Motivo = { tipo: 'noticias' | 'fundamentos' | 'tecnico' | 'analistas' | 'mercado'; titulo: string; detalle: string };
 type Body = { v: 2; resumen: string; motivos: Motivo[]; sources: { title: string; site: string; url: string }[]; usados: string[]; generated: boolean; changePct: number };
 
+const pct = (v: number) => `${Math.abs(v).toFixed(1).replace('.', ',')}%`;
+
+/** Explicación armada con reglas, para cuando la IA no responde: siempre hay algo útil que mostrar. */
+function fallback(name: string, chg: number, d: any, newsTitles: string[]): { resumen: string; motivos: Motivo[] } {
+  const up = chg >= 0, motivos: Motivo[] = [];
+  const idx = d.mercado?.cambio_pct_hoy as number | null | undefined;
+  if (idx != null) {
+    const same = Math.sign(idx) === Math.sign(chg) && Math.abs(idx) >= 0.3;
+    motivos.push(same
+      ? { tipo: 'mercado', titulo: 'Acompaña a todo el mercado', detalle: `El ${d.mercado.indice} ${idx >= 0 ? 'sube' : 'baja'} ${pct(idx)} hoy, así que buena parte del movimiento es general.` }
+      : { tipo: 'mercado', titulo: 'Va por su cuenta', detalle: `El ${d.mercado.indice} se mueve ${pct(idx)} y ${name} ${up ? 'sube' : 'baja'} ${pct(chg)}: el movimiento es propio de la empresa.` });
+  }
+  if (newsTitles[0]) motivos.push({ tipo: 'noticias', titulo: 'Lo que se publicó', detalle: `La noticia más reciente: “${newsTitles[0]}”.` });
+  const t = d.tecnico;
+  if (t?.rsi_14 != null) {
+    const rsi = t.rsi_14 as number;
+    const estado = rsi > 70 ? 'sobrecomprada (subió muy rápido y suele tomar aire)' : rsi < 30 ? 'sobrevendida (bajó muy rápido y a veces rebota)' : 'en zona normal';
+    motivos.push({ tipo: 'tecnico', titulo: rsi > 70 ? 'Viene de subir mucho' : rsi < 30 ? 'Viene de bajar mucho' : 'Tendencia del último mes', detalle: `En el último mes ${t.rendimiento_1_mes_pct >= 0 ? 'ganó' : 'perdió'} ${pct(t.rendimiento_1_mes_pct ?? 0)}. Su RSI, que mide la velocidad de las subas y bajas, está en ${Math.round(rsi)}: ${estado}.` });
+  }
+  const a = d.analistas;
+  if (a) motivos.push({ tipo: 'analistas', titulo: 'Qué dicen los analistas', detalle: `De ${a.cantidad} analistas, ${a.dicen_comprar} dicen comprar, ${a.dicen_mantener} mantener y ${a.dicen_vender} vender.` });
+  const base = `${name} ${up ? 'sube' : 'baja'} ${pct(chg)} hoy`;
+  const resumen = motivos[0]?.tipo !== 'mercado' ? `${base}.` : motivos[0].titulo.startsWith('Acompaña') ? `${base}, en línea con su mercado.` : `${base}, por motivos propios más que por el mercado.`;
+  return { resumen, motivos: motivos.slice(0, 4) };
+}
+
 const r1 = (v: number | null | undefined) => (v == null || !isFinite(v) ? null : Math.round(v * 10) / 10);
 
 /**
@@ -72,9 +98,8 @@ export async function GET(_req: Request, { params }: { params: { symbol: string 
     datos.mercado ? 'Mercado' : ''
   ].filter(Boolean);
 
-  if (!aiEnabled()) {
-    return NextResponse.json({ v: 2, resumen: '', motivos: [], sources, usados, generated: false, changePct: quote.changePct } satisfies Body);
-  }
+  const plain = () => NextResponse.json({ v: 2, ...fallback(quote.name, quote.changePct, datos, news.map((n) => n.title)), sources, usados, generated: false, changePct: quote.changePct } satisfies Body);
+  if (!aiEnabled()) return plain();
 
   const sube = quote.changePct >= 0;
   const prompt = `Sos el analista de CanillitaFinanciero, una app argentina que explica la bolsa a gente común (pensá en Don Carlos y Doña Rosa).
@@ -102,7 +127,7 @@ Formato JSON:
 Entre 2 y 4 motivos.`;
 
   try {
-    const out = await askJSON<{ resumen: string; motivos: Motivo[] }>(prompt, { model: MODEL, maxTokens: 900 });
+    const out = await askJSON<{ resumen: string; motivos: Motivo[] }>(prompt, { model: MODEL, maxTokens: 1600 });
     const tipos = ['noticias', 'fundamentos', 'tecnico', 'analistas', 'mercado'];
     const body: Body = {
       v: 2,
@@ -110,10 +135,11 @@ Entre 2 y 4 motivos.`;
       motivos: (out.motivos ?? []).filter((m) => m?.titulo).slice(0, 4).map((m) => ({ ...m, tipo: (tipos.includes(m.tipo) ? m.tipo : 'mercado') as Motivo['tipo'] })),
       sources, usados, generated: true, changePct: quote.changePct
     };
+    if (!body.motivos.length) throw new Error('respuesta vacía');
     if (admin) await admin.from('ai_explanations').upsert({ symbol, day, body });
     return NextResponse.json(body);
   } catch (e: any) {
     console.error(`[IA] explicación ${symbol}: ${String(e?.message ?? e).slice(0, 200)}`);
-    return NextResponse.json({ v: 2, resumen: '', motivos: [], sources, usados, generated: false, changePct: quote.changePct } satisfies Body);
+    return plain();
   }
 }

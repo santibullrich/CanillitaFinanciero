@@ -3,6 +3,7 @@ import { fetchQuotes, getCryptoTop, getDaily, getFx, getGrades, getIntraday, get
 import { supabaseAdmin } from './supabase/admin';
 import { finnhubError, fhRatios } from './finnhub';
 import { googleEnabled } from './authProviders';
+import { aiEnabled, askText, MODEL } from './ai';
 import { isoDaysAgo } from './technicals';
 
 export type Check = { name: string; ok: boolean; detail: string; fix?: string };
@@ -56,6 +57,7 @@ export async function runChecks() {
     check('Valor de mercado de acciones', async () => count(Object.keys(await getMarketCaps(['AAPL', 'MSFT'])).length, 'de 2')),
     check('Ficha de empresa y analistas', async () => { const p = await getProfile('AAPL'); const g = await getGrades('AAPL'); return { ok: !!p?.sector && !!g, detail: p?.sector ? `${p.sector}${g ? ` · ${g.strongBuy + g.buy} analistas dicen comprar` : ''}` : 'Sin datos' }; }),
     check('Ratios: P/E y dividendo (KO)', async () => { const r = await fhRatios('KO'); return { ok: !!r, detail: r ? `P/E ${r.pe?.toFixed(1) ?? '–'} · dividendo ${r.dividendYield?.toFixed(1) ?? '–'}%` : 'Sin datos' }; }),
+    check('IA (Claude)', async () => { if (!aiEnabled()) return { ok: false, detail: 'Falta ANTHROPIC_API_KEY' }; const t0 = Date.now(); const t = await askText('Respondé solo con la palabra: listo', { model: MODEL, maxTokens: 10 }); return { ok: !!t, detail: `${MODEL} respondió "${t.slice(0, 20)}" · ${Date.now() - t0} ms` }; }),
     check('Noticias', async () => count((await getNews('AAPL', 3)).length)),
     check('Gráfico del día', async () => count((await getIntraday('AAPL', '5min', isoDaysAgo(5))).length, 'puntos')),
     check('Histórico diario', async () => count((await getDaily('AAPL', isoDaysAgo(40))).length, 'días')),

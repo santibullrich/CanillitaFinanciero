@@ -16,7 +16,7 @@ export default function Explain({ symbol, up }: { symbol: string; up: boolean })
   }, [symbol]);
   const k = up ? 'up' : 'down';
   if (err) return <p className="note">No pudimos armar la explicación ahora. Probá en un rato.</p>;
-  if (!d) return <p className="note">Leyendo noticias, números y gráficos del día…</p>;
+  if (!d) return <p className="note">La IA está leyendo noticias, números y gráficos del día. Tarda unos segundos…</p>;
   const motivos = d.motivos ?? [];
   return (
     <>
@@ -31,7 +31,7 @@ export default function Explain({ symbol, up }: { symbol: string; up: boolean })
           ))}
         </ul>
       ) : <p className="note">Hoy no pudimos armar la explicación. A veces las acciones se mueven con el resto del mercado.</p>}
-      {d.generated && d.usados?.length > 0 && <p className="src" style={{ marginTop: 14 }}>Explicación hecha con IA (Claude) cruzando: {d.usados.join(', ')}.</p>}
+      {d.usados?.length > 0 && <p className="src" style={{ marginTop: 14 }}>{d.generated ? 'Explicación hecha con IA (Claude) cruzando' : 'Resumen automático con'}: {d.usados.join(', ')}.</p>}
       {d.sources.length > 0 && (
         <div className="src">
           <p style={{ marginBottom: 6 }}>Noticias que leímos:</p>
