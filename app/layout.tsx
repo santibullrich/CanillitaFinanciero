@@ -50,7 +50,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <div className="dateline-band"><div className="wrap"><div className="pl-dateline"><span>{date} · BUENOS AIRES</span><span>Edición en vivo</span></div></div></div>
         <Tape />
         <nav className="subnav" aria-label="Secciones"><div className="wrap">
-          <Link href="/">Inicio</Link><Link href="/mercado/cr">Cripto</Link><Link href="/mercado/ar">Argentina</Link><Link href="/mercado/us">Wall Street</Link><Link href="/joyitas">Joyitas</Link><Link href="/cartera">Mi cartera</Link>
+          <Link href="/">Inicio</Link><Link href="/explorar">Explorar</Link><Link href="/mercado/cr">Cripto</Link><Link href="/mercado/ar">Argentina</Link><Link href="/mercado/us">Wall Street</Link><Link href="/joyitas">Joyitas</Link><Link href="/cartera">Mi cartera</Link>
         </div></nav>
         <div id="view">{children}</div>
         <footer className="foot"><div className="wrap">

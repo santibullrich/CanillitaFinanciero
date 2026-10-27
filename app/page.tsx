@@ -2,10 +2,11 @@ import Link from 'next/link';
 import Badge from '@/components/Badge';
 import Flag from '@/components/Flag';
 import Meter from '@/components/Meter';
+import DataNotice from '@/components/DataNotice';
 import WorldMap, { type Pin } from '@/components/WorldMap';
 import { LiveProvider } from '@/components/Live';
 import { StockList, type RowData } from '@/components/StockRow';
-import { worldCached, worldTitle, type Row } from '@/lib/data';
+import { worldSafe, worldTitle, type Row } from '@/lib/data';
 import { getQuotes } from '@/lib/fmp';
 import { THEMES } from '@/lib/themes';
 import { absPct, dir, fmtCap, fmtCapDelta, fmtPct, mood, todayAR } from '@/lib/format';
@@ -17,7 +18,7 @@ const toRow = (q: Row): RowData => ({ symbol: q.symbol, name: q.name, price: q.p
 const ARROW = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>;
 
 export default async function Home() {
-  const [w, themeQuotes] = await Promise.all([worldCached(), getQuotes(THEMES.flatMap((t) => t.symbols), 120).catch(() => [])]);
+  const [w, themeQuotes] = await Promise.all([worldSafe(), getQuotes(THEMES.flatMap((t) => t.symbols), 120).catch(() => [])]);
   const tq = new Map(themeQuotes.map((q) => [q.symbol, q] as const));
   const geo = w.snaps.filter((s) => s.market.id !== 'cr');
   const best = [...geo].sort((a, b) => b.changePct - a.changePct)[0];
@@ -30,6 +31,7 @@ export default async function Home() {
 
   return (
     <LiveProvider symbols={liveSymbols}>
+      {w.failed && <DataNotice />}
       <section className="pl-atmo heroband"><div className="pl-hero"><div className="hero-grid">
         <div className="hero-copy pl-reveal">
           <span className="pl-eyebrow pl-live">En vivo · {todayAR()}</span>
@@ -43,7 +45,7 @@ export default async function Home() {
           <div className="hero-ctas"><a className="pl-btn primary" href="#mundo">Dar la vuelta al mundo{ARROW}</a><Link className="pl-link" href="/joyitas">Ver las joyitas de los analistas</Link></div>
         </div>
         <div className="hero-board quiet">
-          <span className="pl-eyebrow">Promedio de las seis bolsas</span>
+          <span className="pl-eyebrow">Promedio de las bolsas del mundo</span>
           <div className={`pl-bignum pl-${dir(w.avg)}`}>{fmtPct(w.avg)}</div>
           <Meter c={w.avg} />
         </div>
@@ -51,7 +53,7 @@ export default async function Home() {
 
       <main className="wrap">
         <section className="sec" id="mundo">
-          <div className="sechead"><span className="pl-eyebrow">La vuelta al mundo</span><h2>Seis mercados, un vistazo</h2><p>Tocá un punto del mapa o una fila para ver qué pasa en cada bolsa.</p></div>
+          <div className="sechead"><span className="pl-eyebrow">La vuelta al mundo</span><h2>Los mercados del mundo</h2><p>Tocá un punto del mapa o una fila para ver qué pasa en cada bolsa. En <Link className="pl-link" href="/explorar">Explorar</Link> tenés todas sus acciones.</p></div>
           {pins.length > 0 && <WorldMap pins={pins} />}
           <div className="pl-list">
             {w.snaps.map((s) => (

@@ -22,7 +22,7 @@ export default function StockRow({ row, rank }: { row: RowData; rank?: number })
   );
 }
 
-export function StockList({ rows, ranked = true, empty }: { rows: RowData[]; ranked?: boolean; empty?: string }) {
+export function StockList({ rows, ranked = true, empty, start = 0 }: { rows: RowData[]; ranked?: boolean; empty?: string; start?: number }) {
   if (!rows.length) return <p className="note">{empty ?? 'Sin datos por ahora.'}</p>;
-  return <div className="pl-list">{rows.map((r, i) => <StockRow key={r.symbol} row={r} rank={ranked ? i : undefined} />)}</div>;
+  return <div className="pl-list">{rows.map((r, i) => <StockRow key={r.symbol} row={r} rank={ranked ? start + i : undefined} />)}</div>;
 }

@@ -5,7 +5,8 @@ import Flag from '@/components/Flag';
 import PriceChart from '@/components/PriceChart';
 import { LiveProvider } from '@/components/Live';
 import { StockList, type RowData } from '@/components/StockRow';
-import { marketSnapshotCached, type Row } from '@/lib/data';
+import { marketSnapshotSafe, type Row } from '@/lib/data';
+import DataNotice from '@/components/DataNotice';
 import { MARKETS, isOpen, marketById } from '@/lib/markets';
 import { dir, fmtCap, fmtCapDelta, fmtPct, mood, nf } from '@/lib/format';
 
@@ -17,7 +18,7 @@ const toRow = (q: Row): RowData => ({ symbol: q.symbol, name: q.name, price: q.p
 export default async function MarketPage({ params }: { params: { id: string } }) {
   const m = marketById(params.id);
   if (!m) notFound();
-  const s = await marketSnapshotCached(m.id);
+  const s = await marketSnapshotSafe(m.id);
   const index = s.index;
   const c = s.changePct;
   const r10 = s.count ? Math.round((s.ups / s.count) * 10) : 0;
@@ -31,6 +32,7 @@ export default async function MarketPage({ params }: { params: { id: string } })
 
   return (
     <LiveProvider symbols={live}>
+      {!s.ok && !s.index && <DataNotice />}
       <section className="pl-atmo heroband"><div className="pl-hero"><div className="hero-grid">
         <div className="hero-copy pl-reveal">
           <Link className="back" href="/">← Volver al mundo</Link>
@@ -52,8 +54,9 @@ export default async function MarketPage({ params }: { params: { id: string } })
           <section className="sec"><div className="sechead"><span className="pl-eyebrow">Bajas del día</span><h2>Las que más bajan</h2></div><StockList rows={s.losers.map(toRow)} empty="Hoy ninguna baja." /></section>
         </div>
         <hr className="rule" />
-        <section className="sec"><div className="sechead"><span className="pl-eyebrow">Las que más pesan</span><h2>{m.id === 'cr' ? 'Las monedas más grandes' : 'Las empresas más grandes'}</h2><p>Ordenadas por valor de mercado. Usá el buscador de arriba para encontrar cualquier otra.</p></div>
+        <section className="sec"><div className="sechead"><span className="pl-eyebrow">Las que más pesan</span><h2>{m.id === 'cr' ? 'Las monedas más grandes' : 'Las empresas más grandes'}</h2><p>Ordenadas por valor de mercado.</p></div>
           <StockList rows={s.largest.map(toRow)} ranked />
+          {s.count > s.largest.length && <div><Link className="pl-btn primary" href={`/explorar?m=${m.id}`}>Ver las {s.count.toLocaleString('es-AR')} {unit} de {m.name}</Link></div>}
         </section>
       </main>
     </LiveProvider>

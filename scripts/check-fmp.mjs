@@ -29,7 +29,27 @@ const tests = [
   ['Noticias cripto', '/news/crypto?symbols=BTCUSD&limit=3', ['title', 'url']],
   ['Histórico diario', '/historical-price-eod/light?symbol=AAPL&from=2025-01-01', ['date', 'price']],
   ['Intradiario 5 min', '/historical-chart/5min?symbol=AAPL', ['date', 'close']],
-  ['Tipo de cambio', '/batch-quote?symbols=EURUSD,USDARS,USDJPY', ['symbol', 'price']]
+  ['Tipo de cambio', '/batch-quote?symbols=EURUSD,USDARS,USDJPY', ['symbol', 'price']],
+  ['Bolsa entera (Nueva York)', '/batch-exchange-quote?exchange=NYSE&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (NASDAQ)', '/batch-exchange-quote?exchange=NASDAQ&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (Londres)', '/batch-exchange-quote?exchange=LSE&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (Toronto)', '/batch-exchange-quote?exchange=TSX&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (México)', '/batch-exchange-quote?exchange=MEX&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (Fráncfort)', '/batch-exchange-quote?exchange=XETRA&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (Euronext)', '/batch-exchange-quote?exchange=EURONEXT&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (Milán)', '/batch-exchange-quote?exchange=MIL&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (Madrid)', '/batch-exchange-quote?exchange=BME&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (Suiza)', '/batch-exchange-quote?exchange=SIX&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (India)', '/batch-exchange-quote?exchange=NSE&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (Shanghái)', '/batch-exchange-quote?exchange=SHH&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (Shenzhen)', '/batch-exchange-quote?exchange=SHZ&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (Hong Kong)', '/batch-exchange-quote?exchange=HKSE&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (Corea)', '/batch-exchange-quote?exchange=KSC&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (Taiwán)', '/batch-exchange-quote?exchange=TAI&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (Australia)', '/batch-exchange-quote?exchange=ASX&short=false', ['symbol', 'price', 'marketCap']],
+  ['Bolsa entera (San Pablo)', '/batch-exchange-quote?exchange=SAO&short=false', ['symbol', 'price', 'marketCap']],
+  ['Índices nuevos', '/batch-quote?symbols=^FTSE,^GSPTSE,^MXX,^SSMI,^NSEI,000001.SS,^KS11,^TWII,^AXJO', ['symbol', 'price']],
+  ['Screener por rubro', '/company-screener?exchange=NASDAQ&sector=Technology&limit=5', ['symbol', 'sector']]
 ];
 
 let fails = 0;

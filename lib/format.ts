@@ -1,11 +1,12 @@
 const cache: Record<number, Intl.NumberFormat> = {};
 export const nf = (d = 2) => (cache[d] ??= new Intl.NumberFormat('es-AR', { minimumFractionDigits: d, maximumFractionDigits: d }));
 
-export const SYM: Record<string, string> = { USD: 'US$', EUR: '€', JPY: '¥', HKD: 'HK$', BRL: 'R$', ARS: '$', GBP: '£', GBp: 'p', CHF: 'CHF', CNY: '¥', KRW: '₩', INR: '₹', CAD: 'C$', AUD: 'A$', MXN: 'MX$' };
+export const SYM: Record<string, string> = { USD: 'US$', EUR: '€', JPY: '¥', HKD: 'HK$', BRL: 'R$', ARS: '$', GBP: '£', GBp: 'p', CHF: 'CHF', CNY: '¥', KRW: '₩', INR: '₹', CAD: 'C$', AUD: 'A$', MXN: 'MX$', TWD: 'NT$' };
 
 export function fmtPrice(v: number | null | undefined, cur = 'USD') {
   if (v == null || !isFinite(v)) return '—';
   const d = cur === 'JPY' || cur === 'KRW' ? 0 : Math.abs(v) >= 1000 ? 0 : Math.abs(v) < 1 ? 4 : 2;
+  if (cur === 'GBp') return `${nf(d).format(v)} p`; // Londres cotiza en peniques
   return `${SYM[cur] ?? cur} ${nf(d).format(v)}`;
 }
 export const fmtPct = (c: number | null | undefined) =>

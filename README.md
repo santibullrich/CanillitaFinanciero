@@ -4,7 +4,8 @@ Todas las noticias del mercado mundial, contadas para que las entiendan Don Carl
 
 App web mobile first (Next.js 14) con:
 
-- Mercados del mundo y cripto, con su valor total y cuánto ganaron o perdieron hoy.
+- 15 mercados (Estados Unidos, Canadá, México, Brasil, Argentina, Reino Unido, Europa, Suiza, India, China, Hong Kong, Japón, Corea del Sur, Taiwán y Australia) más cripto, con su valor total y cuánto ganaron o perdieron hoy.
+- Explorar: todas las acciones de cada bolsa, con filtro por rubro, orden y páginas.
 - Subas y bajas del día por mercado, y las empresas más grandes de cada bolsa.
 - Buscador de cualquier acción o cripto del mundo (todas las bolsas que cubre Financial Modeling Prep).
 - Página de cada activo: precio en vivo, gráfico, “¿por qué se movió hoy?” explicado con IA a partir de las noticias, opinión de analistas y datos clave.
@@ -35,6 +36,14 @@ Las claves `SUPABASE_SERVICE_ROLE_KEY`, `FMP_API_KEY` y `ANTHROPIC_API_KEY` son 
 3. **Probá FMP**: `npm install` y después `npm run check:fmp`. Verifica cada endpoint con tu clave y te dice si falta algún campo o si tu plan no lo incluye.
 4. **Corré la app**: `npm run dev` y abrí http://localhost:3000.
 
+## Si la app muestra todo en 0% o vacío
+
+Abrí `https://tu-app.vercel.app/estado`. Prueba en vivo cada variable, cada endpoint de FMP y cada tabla de Supabase, y te dice qué hacer con lo que falla (también en JSON en `/api/estado`). Lo más común:
+
+- Falta `FMP_API_KEY` en Vercel, o se cargó después de publicar: agregala en *Settings → Environment Variables* y hacé *Redeploy*.
+- El plan de FMP no incluye listas de bolsas enteras, cripto o bolsas fuera de EE.UU.: la página lo indica endpoint por endpoint.
+- Los errores también aparecen en los logs de Vercel con el prefijo `[FMP]`.
+
 ## Publicar en Vercel
 
 1. Subí el repo a GitHub.
@@ -45,7 +54,7 @@ Las claves `SUPABASE_SERVICE_ROLE_KEY`, `FMP_API_KEY` y `ANTHROPIC_API_KEY` son 
 ## Notas
 
 - **Plan de FMP**: para cotizaciones de todas las bolsas del mundo hace falta un plan con cobertura global. Para mostrar los datos al público, FMP pide un acuerdo de licencia de visualización aparte del plan personal.
-- **Caché**: las listas de bolsas enteras se cachean 2 minutos, los precios que ves en pantalla se refrescan cada 20 segundos, las explicaciones con IA se guardan una vez por día y activo, y los datos de analistas 12 horas.
+- **Caché y consumo**: las listas de bolsas enteras se piden cada 15 minutos (son respuestas grandes y consumen ancho de banda del plan de FMP), los precios que ves en pantalla se refrescan cada 20 segundos, las explicaciones con IA se guardan una vez por día y activo, y los datos de analistas 12 horas.
 - **Asesor**: cada usuario puede consultarlo hasta 2 veces por minuto. Si la app va a recomendar movimientos a terceros, en Argentina corresponde registrarse ante la CNV como Agente Asesor Global de Inversión.
 - **Logos**: se cargan desde la CDN de logo.dev; si un logo no existe, se ve un monograma con las iniciales. No se descargan ni se guardan, como pide logo.dev.
 - **Dónde tocar**: todos los endpoints de FMP están en `lib/fmp.ts`; los mercados y sus bolsas en `lib/markets.ts`; los temas en `lib/themes.ts`; los textos de la IA en `app/api/explain` y `app/api/advisor`.

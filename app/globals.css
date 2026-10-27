@@ -651,3 +651,18 @@ footer.foot .bajada{font-size:17px;color:var(--ground)}
 .split-leg{display:flex;gap:18px;flex-wrap:wrap;font-size:14px}
 .split-leg span{display:inline-flex;align-items:center;gap:6px}
 .split-leg i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.mkt-chips{display:flex;flex-wrap:wrap;gap:6px}
+.mkt-chips a{display:inline-flex;align-items:center;padding:7px 11px;border:1px solid var(--line);border-radius:var(--radius-sm);font-size:14px;font-weight:600;color:var(--ink);text-decoration:none;background:var(--ground-raised)}
+.mkt-chips a:hover{border-color:var(--ink)}
+.mkt-chips a[aria-current="page"]{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.filters{display:flex;flex-wrap:wrap;gap:12px;align-items:end}
+.filters .field{flex:1 1 200px}
+.filters .pl-btn{width:auto}
+.count{font-size:14px;color:var(--ink-muted)}
+.count b{color:var(--ink)}
+.pager{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.pager .pl-btn{width:auto}
+.pager .pl-num{font-size:13px;color:var(--ink-muted)}
+.status-row{grid-template-columns:64px minmax(0,1fr)}
+.status-row .pl-badge{grid-row:span 2;align-self:start;justify-content:center}
+.status-row .pl-meta{grid-column:2}

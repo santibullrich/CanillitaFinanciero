@@ -6,7 +6,7 @@ import { MAP, landDots, lonLatToCell } from '@/lib/worldmask';
 import { dir, fmtPct } from '@/lib/format';
 
 export type Pin = { id: string; city: string; changePct: number; lonLat: [number, number]; label: string };
-const ARCS: [string, string][] = [['ar', 'br'], ['br', 'us'], ['us', 'eu'], ['eu', 'hk'], ['hk', 'jp'], ['br', 'eu']];
+const ARCS: [string, string][] = [['ar', 'br'], ['br', 'us'], ['mx', 'us'], ['ca', 'us'], ['us', 'uk'], ['uk', 'eu'], ['eu', 'in'], ['in', 'hk'], ['hk', 'jp'], ['hk', 'au']];
 const COL: Record<string, number[]> = { up: [75, 208, 143], down: [255, 107, 107], flat: [201, 196, 186] };
 
 export default function WorldMap({ pins }: { pins: Pin[] }) {

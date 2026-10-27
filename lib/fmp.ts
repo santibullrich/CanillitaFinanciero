@@ -13,18 +13,35 @@ export class FmpError extends Error {
   }
 }
 
+/** Último error de FMP visto por esta instancia (para la página de estado). */
+export let lastFmpError: { path: string; message: string; at: string } | null = null;
+
 async function fmp<T>(path: string, params: Record<string, string | number | boolean | undefined> = {}, revalidate = 60): Promise<T> {
-  const key = process.env.FMP_API_KEY;
+  try {
+    return await fmpRaw<T>(path, params, revalidate);
+  } catch (e: any) {
+    lastFmpError = { path, message: String(e?.message ?? e), at: new Date().toISOString() };
+    console.error(`[FMP] ${path}: ${lastFmpError.message}`);
+    throw e;
+  }
+}
+
+/** Llamada sin manejo de errores, también la usa /api/estado para mostrar el mensaje exacto de FMP. */
+export async function fmpRaw<T>(path: string, params: Record<string, string | number | boolean | undefined> = {}, revalidate = 60): Promise<T> {
+  const key = process.env.FMP_API_KEY?.trim();
   if (!key) throw new FmpError(path, 0, 'Falta la variable FMP_API_KEY');
   const url = new URL(BASE + path);
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== '') url.searchParams.set(k, String(v));
   url.searchParams.set('apikey', key);
-  const res = await fetch(url.toString(), { next: { revalidate } });
-  if (!res.ok) throw new FmpError(path, res.status);
-  const data = await res.json();
-  if (data && !Array.isArray(data) && typeof data === 'object' && (data['Error Message'] || data.error)) {
-    throw new FmpError(path, 402, String(data['Error Message'] || data.error));
+  const init = (revalidate > 0 ? { next: { revalidate } } : { cache: 'no-store' }) as RequestInit;
+  const res = await fetch(url.toString(), init);
+  const text = await res.text();
+  let data: any;
+  try { data = JSON.parse(text); } catch { throw new FmpError(path, res.status, `Respuesta no válida (${res.status}): ${text.slice(0, 160)}`); }
+  if (data && !Array.isArray(data) && typeof data === 'object' && (data['Error Message'] || data.error || data.message)) {
+    throw new FmpError(path, res.status, String(data['Error Message'] || data.error || data.message).replace(key, '***'));
   }
+  if (!res.ok) throw new FmpError(path, res.status);
   return data as T;
 }
 
@@ -79,8 +96,14 @@ export async function getQuotes(symbols: string[], revalidate = 30): Promise<Quo
   const uniq = Array.from(new Set(symbols.filter(Boolean)));
   const chunks: string[][] = [];
   for (let i = 0; i < uniq.length; i += 100) chunks.push(uniq.slice(i, i + 100));
-  const res = await Promise.all(chunks.map((c) => fmp<any[]>('/batch-quote', { symbols: c.join(',') }, revalidate).catch(() => [])));
-  return res.flat().map(normQuote);
+  const res = await Promise.all(chunks.map((c) => fmp<any[]>('/batch-quote', { symbols: c.join(',') }, revalidate).catch(() => [] as any[])));
+  const got = res.flat().map(normQuote);
+  // Si el plan no incluye cotizaciones en lote, se piden de a una (máximo 40).
+  if (!got.length && uniq.length) {
+    const one = await Promise.all(uniq.slice(0, 40).map((s) => fmp<any[]>('/quote', { symbol: s }, revalidate).catch(() => [] as any[])));
+    return one.flat().map(normQuote);
+  }
+  return got;
 }
 
 export async function getQuote(symbol: string): Promise<Quote | null> {
@@ -88,15 +111,21 @@ export async function getQuote(symbol: string): Promise<Quote | null> {
   return r[0] ? normQuote(r[0]) : null;
 }
 
-/** Todas las acciones de una bolsa (por ejemplo NASDAQ, JPX, BUE). Respuesta grande: se cachea 2 minutos. */
+/** Todas las acciones de una bolsa (por ejemplo NASDAQ, JPX, BUE). Respuesta grande: se pide cada 15 minutos. */
 export async function getExchangeQuotes(exchange: string): Promise<Quote[]> {
-  const r = await fmp<any[]>('/batch-exchange-quote', { exchange, short: false }, 120).catch(() => []);
+  const r = await fmp<any[]>('/batch-exchange-quote', { exchange, short: false }, 900).catch(() => []);
   return r.map(normQuote);
 }
 
 export async function getCryptoQuotes(): Promise<Quote[]> {
-  const r = await fmp<any[]>('/batch-crypto-quotes', { short: false }, 60).catch(() => []);
+  const r = await fmp<any[]>('/batch-crypto-quotes', { short: false }, 900).catch(() => []);
   return r.map(normQuote);
+}
+
+/** Símbolos que cumplen un filtro del screener de FMP (por ejemplo una bolsa y un rubro). Sin ETFs ni fondos. */
+export async function screenerSymbols(params: Record<string, string | number | boolean>): Promise<string[]> {
+  const r = await fmp<any[]>('/company-screener', { limit: 10000, isEtf: false, isFund: false, isActivelyTrading: true, ...params }, 86400).catch(() => []);
+  return r.map((x) => String(x.symbol)).filter(Boolean);
 }
 
 export type SearchHit = { symbol: string; name: string; exchange: string; currency: string };
@@ -175,7 +204,7 @@ export async function getIntraday(symbol: string, interval: '5min' | '1hour', fr
 
 /** Tipos de cambio a dólar. Devuelve cuántos USD vale 1 unidad de cada moneda. */
 export async function getFx(): Promise<Record<string, number>> {
-  const pairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDHKD', 'USDBRL', 'USDARS', 'USDCHF', 'USDCNY', 'USDCAD', 'USDMXN', 'AUDUSD', 'USDKRW', 'USDINR'];
+  const pairs = ['EURUSD', 'GBPUSD', 'USDJPY', 'USDHKD', 'USDBRL', 'USDARS', 'USDCHF', 'USDCNY', 'USDCAD', 'USDMXN', 'AUDUSD', 'USDKRW', 'USDINR', 'USDTWD'];
   const qs = await getQuotes(pairs, 300);
   const fx: Record<string, number> = { USD: 1 };
   for (const q of qs) {

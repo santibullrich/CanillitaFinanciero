@@ -25,7 +25,7 @@ export default async function StockPage({ params }: { params: { symbol: string }
   if (!quote) notFound();
   const mId = marketOfSymbol(symbol, quote.exchange);
   const crypto = mId === 'cr';
-  const m = marketById(mId)!;
+  const m = marketById(mId) ?? { id: 'xx', name: 'Otros mercados', currency: 'USD' };
   const [profile, ratios, grades, target] = await Promise.all([
     getProfile(symbol).catch(() => null),
     crypto ? null : getRatios(symbol).catch(() => null),
@@ -51,8 +51,8 @@ export default async function StockPage({ params }: { params: { symbol: string }
     <LiveProvider symbols={[symbol]}>
       <section className="pl-atmo heroband"><div className="pl-hero"><div className="hero-grid">
         <div className="hero-copy pl-reveal">
-          <Link className="back" href={`/mercado/${m.id}`}>← {m.name}</Link>
-          <span className="pl-eyebrow eyeflag"><Flag id={m.id} size="lg" />{symbol}{profile?.sector ? ` · ${profile.sector}` : crypto ? ' · criptomoneda' : ''} · {m.name}</span>
+          <Link className="back" href={m.id === 'xx' ? '/explorar' : `/mercado/${m.id}`}>← {m.id === 'xx' ? 'Explorar' : m.name}</Link>
+          <span className="pl-eyebrow eyeflag"><Flag id={m.id} size="lg" />{symbol}{profile?.sector ? ` · ${profile.sector}` : crypto ? ' · criptomoneda' : ''} · {m.id === 'xx' ? profile?.country || 'Otros mercados' : m.name}</span>
           <h1 className="h1logo" style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(42px,9vw,80px)', lineHeight: 0.92 }}>
             <Logo symbol={symbol} name={quote.name} website={profile?.website} crypto={crypto} size="lg" /><span>{profile?.name ?? quote.name}</span>
           </h1>
