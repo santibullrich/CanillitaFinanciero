@@ -13,6 +13,7 @@ import { absPct, dir, fmtCap, fmtCapDelta, fmtPct, mood, todayAR } from '@/lib/f
 import { isOpen } from '@/lib/markets';
 
 export const revalidate = 120;
+export const maxDuration = 60;
 
 const toRow = (q: Row): RowData => ({ symbol: q.symbol, name: q.name, price: q.price, changePct: q.changePct, market: q.market, currency: q.currency });
 const ARROW = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>;
@@ -61,7 +62,7 @@ export default async function Home() {
                 <span className="pl-name"><Flag id={s.market.id} />{s.market.name}</span>
                 <span className="pl-side"><Badge c={s.changePct} /></span>
                 <span className="pl-meta">{s.market.indexName} · <span className="mood">{mood(s.changePct).word}</span> · {isOpen(s.market) ? (s.market.id === 'cr' ? 'abierto 24/7' : 'abierto') : 'cerrado'}</span>
-                <span className="capline">Vale <b>{fmtCap(s.capUsd)}</b> · hoy <b className={`pl-${dir(s.capDeltaUsd)}`}>{fmtCapDelta(s.capDeltaUsd)}</b></span>
+                <span className="capline">{s.partial ? `Sus ${s.count} más grandes valen` : 'Vale'} <b>{fmtCap(s.capUsd)}</b> · hoy <b className={`pl-${dir(s.capDeltaUsd)}`}>{fmtCapDelta(s.capDeltaUsd)}</b></span>
               </Link>
             ))}
           </div>

@@ -72,6 +72,7 @@ export default async function Explorar({ searchParams }: { searchParams: SP }) {
               ? <>Mostrando {nf(0).format(from)}–{nf(0).format(to)} de <b>{nf(0).format(res.total)}</b> {unit} de {m.name}{sector ? ` · ${sectorEs(sector)}` : ''}</>
               : <>No encontramos {unit} con esos filtros. Probá con otro rubro o mercado.</>}
           </p>
+          {res.partial && <p className="flash">Tu plan de datos no incluye la lista completa de esta bolsa, así que mostramos sus {res.total} {unit} más grandes.</p>}
           <StockList rows={res.rows} start={(res.page - 1) * res.per} />
           {res.pages > 1 && (
             <nav className="pager" aria-label="Páginas">

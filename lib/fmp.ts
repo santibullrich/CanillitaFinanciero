@@ -98,10 +98,12 @@ export async function getQuotes(symbols: string[], revalidate = 30): Promise<Quo
   for (let i = 0; i < uniq.length; i += 100) chunks.push(uniq.slice(i, i + 100));
   const res = await Promise.all(chunks.map((c) => fmp<any[]>('/batch-quote', { symbols: c.join(',') }, revalidate).catch(() => [] as any[])));
   const got = res.flat().map(normQuote);
-  // Si el plan no incluye cotizaciones en lote, se piden de a una (máximo 40).
-  if (!got.length && uniq.length) {
-    const one = await Promise.all(uniq.slice(0, 40).map((s) => fmp<any[]>('/quote', { symbol: s }, revalidate).catch(() => [] as any[])));
-    return one.flat().map(normQuote);
+  // Lo que no vino en el lote (índices, o un plan sin cotizaciones en lote) se pide de a uno, hasta 30 símbolos.
+  const have = new Set(got.map((q) => q.symbol));
+  const missing = uniq.filter((s) => !have.has(s)).slice(0, 30);
+  if (missing.length) {
+    const one = await Promise.all(missing.map((s) => fmp<any[]>('/quote', { symbol: s }, revalidate).catch(() => [] as any[])));
+    got.push(...one.flat().map(normQuote));
   }
   return got;
 }

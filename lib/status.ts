@@ -17,7 +17,9 @@ const ENV: [string, string][] = [
 const TESTS: [string, string, Record<string, string | number | boolean>, string[]][] = [
   ['Cotización (AAPL)', '/quote', { symbol: 'AAPL' }, ['price', 'changePercentage', 'marketCap', 'previousClose']],
   ['Cotizaciones en lote', '/batch-quote', { symbols: 'AAPL,MSFT,GGAL' }, ['symbol', 'price']],
-  ['Índices (S&P 500 y Merval)', '/batch-quote', { symbols: '^GSPC,^MERV' }, ['symbol', 'price']],
+  ['Índice (S&P 500)', '/quote', { symbol: '^GSPC' }, ['symbol', 'price', 'changePercentage']],
+  ['Índice (Merval)', '/quote', { symbol: '^MERV' }, ['symbol', 'price']],
+  ['Bolsa entera: NASDAQ', '/batch-exchange-quote', { exchange: 'NASDAQ', short: false }, ['symbol', 'price', 'marketCap']],
   ['Bolsa entera: Buenos Aires', '/batch-exchange-quote', { exchange: 'BUE', short: false }, ['symbol', 'price', 'marketCap']],
   ['Bolsa entera: Tokio', '/batch-exchange-quote', { exchange: 'JPX', short: false }, ['symbol', 'price', 'marketCap']],
   ['Cripto', '/batch-crypto-quotes', { short: false }, ['symbol', 'price', 'marketCap']],

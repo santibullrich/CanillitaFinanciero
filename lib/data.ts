@@ -2,6 +2,7 @@ import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { MARKETS, marketById, type Market, type MarketId } from './markets';
 import { getCryptoQuotes, getExchangeQuotes, getFx, getQuote, getQuotes, screenerSymbols, type Quote } from './fmp';
+import { TOP } from './topSymbols';
 
 /** Una acción o moneda, en forma compacta para listas grandes. */
 export type Row = { symbol: string; name: string; price: number; changePct: number; marketCap: number; market: MarketId; currency: string };
@@ -18,6 +19,8 @@ export type MarketSnap = {
   losers: Row[];
   largest: Row[];
   ok: boolean;
+  /** true cuando no hay lista completa de la bolsa y se usan solo sus empresas más grandes. */
+  partial: boolean;
 };
 
 const plausible = (q: Quote) => q.price > 0 && Math.abs(q.changePct) < 80 && (q.marketCap ?? 0) > 0;
@@ -27,10 +30,18 @@ const plausible = (q: Quote) => q.price > 0 && Math.abs(q.changePct) < 80 && (q.
  * Las bolsas enteras son respuestas grandes, así que se piden cada 15 minutos;
  * los precios que se ven en pantalla se refrescan aparte cada 20 segundos.
  */
-export const marketRows = unstable_cache(async (id: string): Promise<Row[]> => {
+export type MarketRows = { rows: Row[]; partial: boolean };
+
+export const marketRows = unstable_cache(async (id: string): Promise<MarketRows> => {
   const m = marketById(id);
-  if (!m) return [];
-  const raw = m.id === 'cr' ? await getCryptoQuotes() : (await Promise.all(m.exchanges.map(getExchangeQuotes))).flat();
+  if (!m) return { rows: [], partial: false };
+  let raw = m.id === 'cr' ? await getCryptoQuotes() : (await Promise.all(m.exchanges.map(getExchangeQuotes))).flat();
+  let partial = false;
+  // Respaldo: si el plan de FMP no incluye la bolsa entera, se cotizan sus empresas más grandes.
+  if (raw.filter(plausible).length < 5) {
+    raw = await getQuotes(TOP[m.id] ?? [], 900);
+    partial = true;
+  }
   const seen = new Set<string>();
   const out: Row[] = [];
   for (const q of raw) {
@@ -40,10 +51,10 @@ export const marketRows = unstable_cache(async (id: string): Promise<Row[]> => {
   }
   // Un resultado vacío casi siempre es un error del proveedor: se lanza para no guardarlo en caché 15 minutos.
   if (!out.length) throw new Error(`Sin datos para ${m.name}`);
-  return out.sort((a, b) => b.marketCap - a.marketCap);
-}, ['market-rows-v3'], { revalidate: 900 });
+  return { rows: out.sort((a, b) => b.marketCap - a.marketCap), partial };
+}, ['market-rows-v4'], { revalidate: 900 });
 
-const safeRows = (id: string) => marketRows(id).catch(() => [] as Row[]);
+const safeRows = (id: string): Promise<MarketRows> => marketRows(id).catch(() => ({ rows: [] as Row[], partial: false }));
 
 /** Símbolos de un rubro dentro de un mercado (screener de FMP, sin ETFs ni fondos). Se actualiza una vez por día. */
 export const sectorSymbols = unstable_cache(async (id: string, sector: string): Promise<string[]> => {
@@ -54,7 +65,8 @@ export const sectorSymbols = unstable_cache(async (id: string, sector: string): 
   return out;
 }, ['sector-symbols-v2'], { revalidate: 86400 });
 
-export function snapshotFrom(m: Market, rows: Row[], fx: Record<string, number>, index: Quote | null): MarketSnap {
+export function snapshotFrom(m: Market, data: MarketRows, fx: Record<string, number>, index: Quote | null): MarketSnap {
+  const rows = data.rows;
   const rate = fx[m.currency] ?? 1;
   let cap = 0, delta = 0;
   for (const q of rows) {
@@ -76,7 +88,8 @@ export function snapshotFrom(m: Market, rows: Row[], fx: Record<string, number>,
     gainers: sorted.filter((q) => q.changePct > 0).slice(0, 10),
     losers: sorted.filter((q) => q.changePct < 0).reverse().slice(0, 10),
     largest: rows.slice(0, 15),
-    ok: rows.length > 0
+    ok: rows.length > 0,
+    partial: data.partial
   };
 }
 
@@ -88,11 +101,11 @@ export const marketSnapshotCached = unstable_cache(async (id: string) => {
   const snap = snapshotFrom(m, rows, fx, index);
   if (!snap.ok && !index) throw new Error(`Sin datos para ${m.name}`);
   return snap;
-}, ['market-snap-v3'], { revalidate: 120 });
+}, ['market-snap-v4'], { revalidate: 120 });
 
 /** Igual que marketSnapshotCached pero nunca falla: si no hay datos devuelve una foto vacía. */
 export async function marketSnapshotSafe(id: string): Promise<MarketSnap> {
-  try { return await marketSnapshotCached(id); } catch { return snapshotFrom(marketById(id)!, [], { USD: 1 }, null); }
+  try { return await marketSnapshotCached(id); } catch { return snapshotFrom(marketById(id)!, { rows: [], partial: false }, { USD: 1 }, null); }
 }
 
 /** Foto del mundo: índices, valor de cada mercado y sus rankings. */
@@ -113,7 +126,7 @@ export const worldCached = unstable_cache(async () => {
     gainers: stocks.filter((q) => q.changePct > 0).sort((a, b) => b.changePct - a.changePct).slice(0, 8),
     losers: stocks.filter((q) => q.changePct < 0).sort((a, b) => a.changePct - b.changePct).slice(0, 8)
   };
-}, ['world-v3'], { revalidate: 120 });
+}, ['world-v4'], { revalidate: 120 });
 
 export type World = Awaited<ReturnType<typeof worldCached>>;
 /** Nunca falla: si el proveedor no responde, devuelve un mundo vacío y la página muestra un aviso. */
@@ -127,7 +140,8 @@ export type ExploreSort = 'valor' | 'suben' | 'bajan' | 'nombre';
 export async function explore(opts: { market: string; sector?: string; sort?: ExploreSort; page?: number; per?: number }) {
   const m = marketById(opts.market) ?? MARKETS[0];
   const per = opts.per ?? 50;
-  let rows = await safeRows(m.id);
+  const data = await safeRows(m.id);
+  let rows = data.rows;
   if (opts.sector && m.id !== 'cr') {
     const set = new Set(await sectorSymbols(m.id, opts.sector).catch(() => [] as string[]));
     rows = rows.filter((r) => set.has(r.symbol));
@@ -138,7 +152,7 @@ export async function explore(opts: { market: string; sector?: string; sort?: Ex
   else if (sort === 'nombre') rows = [...rows].sort((a, b) => a.name.localeCompare(b.name, 'es'));
   const pages = Math.max(1, Math.ceil(rows.length / per));
   const page = Math.min(Math.max(1, opts.page ?? 1), pages);
-  return { market: m, total: rows.length, page, pages, per, rows: rows.slice((page - 1) * per, page * per) };
+  return { market: m, total: rows.length, page, pages, per, partial: data.partial, rows: rows.slice((page - 1) * per, page * per) };
 }
 
 export function worldTitle(c: number) {
