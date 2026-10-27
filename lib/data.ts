@@ -154,10 +154,9 @@ export async function explore(opts: { market: string; sort?: ExploreSort; page?:
   return { market: m, total: rows.length, page, pages, per, partial: data.partial, rows: rows.slice((page - 1) * per, page * per) };
 }
 
+/** Título de la portada: alcista, bajista o en una meseta (movimiento promedio menor a 0,3%). */
 export function worldTitle(c: number) {
-  if (c > 1) return ['Hoy los mercados están', 'de fiesta', ''];
-  if (c > 0.3) return ['Hoy el mundo amaneció con', 'ganas', ''];
-  if (c > -0.3) return ['Hoy los mercados están', 'tranquilos', ''];
-  if (c > -1) return ['Hoy los mercados vienen', 'flojos', ''];
-  return ['Hoy es un', 'día difícil', 'en los mercados'];
+  if (c >= 0.3) return ['Hoy el mundo está', 'alcista', ''];
+  if (c <= -0.3) return ['Hoy el mundo está', 'bajista', ''];
+  return ['Hoy el mundo está', 'en una meseta', ''];
 }
