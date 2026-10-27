@@ -1,0 +1,29 @@
+{
+  "name": "canillita-financiero",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "check:fmp": "node scripts/check-fmp.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.45.4",
+    "next": "^14.2.25",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.11",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "typescript": "^5.6.3"
+  },
+  "engines": {
+    "node": ">=18.18"
+  }
+}
