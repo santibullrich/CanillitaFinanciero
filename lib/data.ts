@@ -1,7 +1,7 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
 import { MARKETS, marketById, type Market, type MarketId } from './markets';
-import { getDayMovers, getFx, getQuote, getQuotes, type Quote } from './yahoo';
+import { getCryptoTop, getDayMovers, getFx, getMarketCaps, getQuote, getQuotes, type Quote } from './yahoo';
 import { TOP } from './topSymbols';
 
 /** Una acción o moneda, en forma compacta para listas grandes. */
@@ -23,7 +23,7 @@ export type MarketSnap = {
   partial: boolean;
 };
 
-const plausible = (q: Quote) => q.price > 0 && Math.abs(q.changePct) < 80 && (q.marketCap ?? 0) > 0;
+const plausible = (q: Quote) => q.price > 0 && Math.abs(q.changePct) < 80;
 
 /**
  * Las principales acciones (o monedas) de un mercado, ordenadas por valor de mercado.
@@ -35,22 +35,32 @@ export type MarketRows = { rows: Row[]; partial: boolean };
 export const marketRows = unstable_cache(async (id: string): Promise<MarketRows> => {
   const m = marketById(id);
   if (!m) return { rows: [], partial: true };
-  const raw: Quote[] = await getQuotes(TOP[m.id] ?? [], 120);
-  if (m.id === 'us') {
-    const [g, l] = await Promise.all([getDayMovers('day_gainers').catch(() => []), getDayMovers('day_losers').catch(() => [])]);
-    raw.push(...g, ...l);
+  let raw: Quote[];
+  if (m.id === 'cr') raw = (await getCryptoTop()).slice(0, 40);
+  else {
+    const list = TOP[m.id] ?? [];
+    const [quotes, caps] = await Promise.all([getQuotes(list, 120), getMarketCaps(list)]);
+    const order = new Map(list.map((s, i) => [s, i] as const));
+    raw = quotes.map((q) => ({ ...q, marketCap: q.marketCap ?? caps[q.symbol] ?? null }))
+      .sort((a, b) => (order.get(a.symbol) ?? 999) - (order.get(b.symbol) ?? 999));
+    if (m.id === 'us') {
+      const [g, l] = await Promise.all([getDayMovers('day_gainers').catch(() => []), getDayMovers('day_losers').catch(() => [])]);
+      raw.push(...g, ...l);
+    }
   }
   const seen = new Set<string>();
   const out: Row[] = [];
   for (const q of raw) {
     if (!plausible(q) || seen.has(q.symbol)) continue;
     seen.add(q.symbol);
-    out.push({ symbol: q.symbol, name: q.name, price: q.price, changePct: Math.round(q.changePct * 100) / 100, marketCap: q.marketCap!, market: m.id, currency: q.currency || m.quoteCurrency || m.currency });
+    out.push({ symbol: q.symbol, name: q.name, price: q.price, changePct: Math.round(q.changePct * 100) / 100, marketCap: q.marketCap ?? 0, market: m.id, currency: q.currency || m.quoteCurrency || m.currency });
   }
-  // Un resultado vacío casi siempre es un error de Yahoo: se lanza para no guardarlo en caché.
+  // Un resultado vacío casi siempre es un error de la fuente: se lanza para no guardarlo en caché.
   if (!out.length) throw new Error(`Sin datos para ${m.name}`);
-  return { rows: out.sort((a, b) => b.marketCap - a.marketCap), partial: true };
-}, ['market-rows-y1'], { revalidate: 120 });
+  // Si hay valores de mercado se ordena por tamaño; si no, queda el orden de la lista (de mayor a menor).
+  const hasCaps = out.filter((r) => r.marketCap > 0).length > out.length / 2;
+  return { rows: hasCaps ? out.sort((a, b) => b.marketCap - a.marketCap) : out, partial: true };
+}, ['market-rows-y2'], { revalidate: 120 });
 
 const safeRows = (id: string): Promise<MarketRows> => marketRows(id).catch(() => ({ rows: [] as Row[], partial: true }));
 
@@ -58,12 +68,16 @@ export function snapshotFrom(m: Market, data: MarketRows, fx: Record<string, num
   const rows = data.rows;
   const rate = fx[m.currency] ?? 1;
   let cap = 0, delta = 0;
-  for (const q of rows) {
-    const c = q.marketCap * rate;
-    cap += c;
-    delta += (c * q.changePct) / (100 + q.changePct);
+  // Solo se informa el valor del mercado si la mayoría de sus empresas tiene ese dato.
+  const withCap = rows.filter((q) => q.marketCap > 0).length;
+  if (withCap >= rows.length * 0.6) {
+    for (const q of rows) {
+      const c = q.marketCap * rate;
+      cap += c;
+      delta += (c * q.changePct) / (100 + q.changePct);
+    }
   }
-  const big = rows.filter((q) => q.marketCap * rate >= m.minCap);
+  const big = rows.filter((q) => !q.marketCap || q.marketCap * rate >= m.minCap);
   const sorted = [...big].sort((a, b) => b.changePct - a.changePct);
   const capChange = cap - delta > 0 ? (delta / (cap - delta)) * 100 : 0;
   return {
@@ -90,7 +104,7 @@ export const marketSnapshotCached = unstable_cache(async (id: string) => {
   const snap = snapshotFrom(m, rows, fx, index);
   if (!snap.ok && !index) throw new Error(`Sin datos para ${m.name}`);
   return snap;
-}, ['market-snap-y1'], { revalidate: 60 });
+}, ['market-snap-y2'], { revalidate: 60 });
 
 /** Igual que marketSnapshotCached pero nunca falla: si no hay datos devuelve una foto vacía. */
 export async function marketSnapshotSafe(id: string): Promise<MarketSnap> {
@@ -115,7 +129,7 @@ export const worldCached = unstable_cache(async () => {
     gainers: stocks.filter((q) => q.changePct > 0).sort((a, b) => b.changePct - a.changePct).slice(0, 8),
     losers: stocks.filter((q) => q.changePct < 0).sort((a, b) => a.changePct - b.changePct).slice(0, 8)
   };
-}, ['world-y1'], { revalidate: 60 });
+}, ['world-y2'], { revalidate: 60 });
 
 export type World = Awaited<ReturnType<typeof worldCached>>;
 /** Nunca falla: si el proveedor no responde, devuelve un mundo vacío y la página muestra un aviso. */

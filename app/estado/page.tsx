@@ -32,7 +32,8 @@ export default async function Estado() {
         <p className="pl-lede">Esta página prueba en vivo cada fuente de datos de la app. No muestra ninguna clave. Revisado: {new Date(r.at).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}.</p>
       </section>
       <Group title="Variables en Vercel" items={r.env} />
-      <Group title="Datos de mercado (Yahoo Finance)" items={r.data} />
+      <Group title="Datos de mercado" items={r.data} />
+      <Group title="Fuentes probadas desde Vercel" items={r.sources} />
       <Group title="Base de datos (Supabase)" items={r.db} />
     </main>
   );
