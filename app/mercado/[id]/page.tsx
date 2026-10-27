@@ -8,7 +8,7 @@ import { StockList, type RowData } from '@/components/StockRow';
 import { marketSnapshotSafe, type Row } from '@/lib/data';
 import DataNotice from '@/components/DataNotice';
 import { MARKETS, isOpen, marketById } from '@/lib/markets';
-import { dir, fmtCap, fmtCapDelta, fmtPct, mood, nf } from '@/lib/format';
+import { fmtPct, mood, nf } from '@/lib/format';
 
 export const revalidate = 120;
 export const maxDuration = 60;
@@ -40,10 +40,6 @@ export default async function MarketPage({ params }: { params: { id: string } })
           <span className="pl-eyebrow eyeflag"><Flag id={m.id} size="lg" />{m.nick} · {m.indexName} · {m.id === 'cr' ? 'abierto 24/7' : isOpen(m) ? 'abierto ahora' : 'cerrado'}</span>
           <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(52px,12vw,96px)', lineHeight: 0.9 }}>{m.name}</h1>
           <div className="price-row">{index && <span className="pl-num" style={{ fontSize: 30, fontWeight: 600 }}>{nf(index.price > 9999 ? 0 : 2).format(index.price)}</span>}<Badge c={c} lg /><span className="mood">{mood(c).word}</span></div>
-          {s.capUsd > 0 && <div className="capstats">
-            <div className="stat"><span>{s.partial ? `Valor de sus ${s.count} principales` : 'Valor de mercado'}</span><b className="pl-num">{fmtCap(s.capUsd)}</b></div>
-            <div className="stat"><span>{s.capDeltaUsd >= 0 ? 'Ganó hoy' : 'Perdió hoy'}</span><b className={`pl-num pl-${dir(s.capDeltaUsd)}`}>{fmtCapDelta(s.capDeltaUsd)}</b></div>
-          </div>}
           <p className="pl-lede">{summary}</p>
           <p className="pl-lede" style={{ fontSize: 16 }}>{m.context}</p>
         </div>

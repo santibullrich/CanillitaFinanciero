@@ -9,7 +9,7 @@ import { StockList, type RowData } from '@/components/StockRow';
 import { worldSafe, worldTitle, type Row } from '@/lib/data';
 import { getQuotes } from '@/lib/yahoo';
 import { THEMES } from '@/lib/themes';
-import { absPct, dir, fmtCap, fmtCapDelta, fmtPct, mood, todayAR } from '@/lib/format';
+import { absPct, dir, fmtPct, mood, todayAR } from '@/lib/format';
 import { isOpen } from '@/lib/markets';
 
 export const revalidate = 120;
@@ -27,7 +27,6 @@ export default async function Home() {
   const top = w.gainers[0];
   const [pre, hl, post] = worldTitle(w.avg);
   const pins: Pin[] = geo.filter((s) => s.market.lonLat).map((s) => ({ id: s.market.id, city: s.market.city, changePct: s.changePct, lonLat: s.market.lonLat!, label: s.market.label ?? 'r' }));
-  const maxCap = Math.max(1, ...w.snaps.map((s) => s.capUsd));
   const liveSymbols = [...w.gainers, ...w.losers].map((q) => q.symbol);
 
   return (
@@ -62,23 +61,9 @@ export default async function Home() {
                 <span className="pl-name"><Flag id={s.market.id} />{s.market.name}</span>
                 <span className="pl-side"><Badge c={s.changePct} /></span>
                 <span className="pl-meta">{s.market.indexName} · <span className="mood">{mood(s.changePct).word}</span> · {isOpen(s.market) ? (s.market.id === 'cr' ? 'abierto 24/7' : 'abierto') : 'cerrado'}</span>
-                {s.capUsd > 0 && <span className="capline">{s.partial ? `Sus ${s.count} principales valen` : 'Vale'} <b>{fmtCap(s.capUsd)}</b> · hoy <b className={`pl-${dir(s.capDeltaUsd)}`}>{fmtCapDelta(s.capDeltaUsd)}</b></span>}
               </Link>
             ))}
           </div>
-          {w.snaps.some((s) => s.capUsd > 0) && <div className="capbars">
-            <div className="sechead"><span className="pl-eyebrow">Tamaño de cada mercado</span><p>Cuánto valen juntas todas las empresas (o monedas) de cada mercado, y cuánta plata ganaron o perdieron hoy.</p></div>
-            <div className="pl-list">
-              {[...w.snaps].filter((s) => s.capUsd > 0).sort((a, b) => b.capUsd - a.capUsd).map((s) => (
-                <Link className="capbar" key={s.market.id} href={`/mercado/${s.market.id}`}>
-                  <span className="nm"><Flag id={s.market.id} />{s.market.name}</span>
-                  <span className="track"><i style={{ width: `${Math.max(0.8, (s.capUsd / maxCap) * 100).toFixed(1)}%` }} /></span>
-                  <span className="v"><b>{fmtCap(s.capUsd)}</b><small className={`pl-${dir(s.capDeltaUsd)}`}>{fmtCapDelta(s.capDeltaUsd)}</small></span>
-                </Link>
-              ))}
-            </div>
-            <p className="note">Suma del valor de mercado de las principales empresas (o monedas) de cada mercado, convertido a dólares.</p>
-          </div>}
         </section>
         <hr className="rule" />
         <div className="pair">

@@ -4,7 +4,7 @@ Todas las noticias del mercado mundial, contadas para que las entiendan Don Carl
 
 App web mobile first (Next.js 14) con:
 
-- 15 mercados (Estados Unidos, Canadá, México, Brasil, Argentina, Reino Unido, Europa, Suiza, India, China, Hong Kong, Japón, Corea del Sur, Taiwán y Australia) más cripto, con su valor total y cuánto ganaron o perdieron hoy.
+- 15 mercados (Estados Unidos, Canadá, México, Brasil, Argentina, Reino Unido, Europa, Suiza, India, China, Hong Kong, Japón, Corea del Sur, Taiwán y Australia) más cripto, con su índice y cómo vienen hoy.
 - Explorar: las principales acciones de cada mercado, ordenadas y por páginas.
 - Subas y bajas del día por mercado, y las empresas más grandes de cada bolsa.
 - Buscador de cualquier acción o cripto del mundo (todo lo que cubre Yahoo Finance).
