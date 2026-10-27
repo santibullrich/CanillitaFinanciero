@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "check:fmp": "node scripts/check-fmp.mjs"
+    "check:datos": "node scripts/check-datos.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
@@ -15,7 +15,8 @@
     "next": "^14.2.25",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "server-only": "^0.0.1"
+    "server-only": "^0.0.1",
+    "yahoo-finance2": "^2.11.3"
   },
   "devDependencies": {
     "@types/node": "^20.16.11",

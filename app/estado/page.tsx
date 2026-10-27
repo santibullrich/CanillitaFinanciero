@@ -23,7 +23,7 @@ function Group({ title, items }: { title: string; items: Check[] }) {
 
 export default async function Estado() {
   const r = await runChecks();
-  const fails = [...r.env, ...r.fmp, ...r.db].filter((c) => !c.ok).length;
+  const fails = [...r.env, ...r.data, ...r.db].filter((c) => !c.ok).length;
   return (
     <main className="wrap" style={{ paddingBlock: 32 }}>
       <section className="sec">
@@ -32,7 +32,7 @@ export default async function Estado() {
         <p className="pl-lede">Esta página prueba en vivo cada fuente de datos de la app. No muestra ninguna clave. Revisado: {new Date(r.at).toLocaleString('es-AR', { timeZone: 'America/Argentina/Buenos_Aires' })}.</p>
       </section>
       <Group title="Variables en Vercel" items={r.env} />
-      <Group title="Financial Modeling Prep" items={r.fmp} />
+      <Group title="Datos de mercado (Yahoo Finance)" items={r.data} />
       <Group title="Base de datos (Supabase)" items={r.db} />
     </main>
   );

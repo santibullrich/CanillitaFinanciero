@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getGrades, getNews, getPriceTarget, getQuote } from '@/lib/fmp';
+import { getGrades, getNews, getPriceTarget, getQuote } from '@/lib/yahoo';
 import { aiEnabled, askJSON, MODEL_FAST } from '@/lib/ai';
 import { supabaseAdmin } from '@/lib/supabase/admin';
 

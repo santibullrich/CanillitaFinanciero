@@ -7,7 +7,7 @@ import WorldMap, { type Pin } from '@/components/WorldMap';
 import { LiveProvider } from '@/components/Live';
 import { StockList, type RowData } from '@/components/StockRow';
 import { worldSafe, worldTitle, type Row } from '@/lib/data';
-import { getQuotes } from '@/lib/fmp';
+import { getQuotes } from '@/lib/yahoo';
 import { THEMES } from '@/lib/themes';
 import { absPct, dir, fmtCap, fmtCapDelta, fmtPct, mood, todayAR } from '@/lib/format';
 import { isOpen } from '@/lib/markets';
@@ -62,7 +62,7 @@ export default async function Home() {
                 <span className="pl-name"><Flag id={s.market.id} />{s.market.name}</span>
                 <span className="pl-side"><Badge c={s.changePct} /></span>
                 <span className="pl-meta">{s.market.indexName} · <span className="mood">{mood(s.changePct).word}</span> · {isOpen(s.market) ? (s.market.id === 'cr' ? 'abierto 24/7' : 'abierto') : 'cerrado'}</span>
-                <span className="capline">{s.partial ? `Sus ${s.count} más grandes valen` : 'Vale'} <b>{fmtCap(s.capUsd)}</b> · hoy <b className={`pl-${dir(s.capDeltaUsd)}`}>{fmtCapDelta(s.capDeltaUsd)}</b></span>
+                <span className="capline">{s.partial ? `Sus ${s.count} principales valen` : 'Vale'} <b>{fmtCap(s.capUsd)}</b> · hoy <b className={`pl-${dir(s.capDeltaUsd)}`}>{fmtCapDelta(s.capDeltaUsd)}</b></span>
               </Link>
             ))}
           </div>
@@ -77,7 +77,7 @@ export default async function Home() {
                 </Link>
               ))}
             </div>
-            <p className="note">Suma del valor de mercado de todas las acciones que cotizan en cada bolsa, convertido a dólares.</p>
+            <p className="note">Suma del valor de mercado de las principales empresas (o monedas) de cada mercado, convertido a dólares.</p>
           </div>
         </section>
         <hr className="rule" />

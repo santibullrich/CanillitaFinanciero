@@ -41,7 +41,7 @@ export default async function MarketPage({ params }: { params: { id: string } })
           <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(52px,12vw,96px)', lineHeight: 0.9 }}>{m.name}</h1>
           <div className="price-row">{index && <span className="pl-num" style={{ fontSize: 30, fontWeight: 600 }}>{nf(index.price > 9999 ? 0 : 2).format(index.price)}</span>}<Badge c={c} lg /><span className="mood">{mood(c).word}</span></div>
           <div className="capstats">
-            <div className="stat"><span>{s.partial ? `Valor de sus ${s.count} empresas más grandes` : 'Valor de mercado'}</span><b className="pl-num">{fmtCap(s.capUsd)}</b></div>
+            <div className="stat"><span>{s.partial ? `Valor de sus ${s.count} principales` : 'Valor de mercado'}</span><b className="pl-num">{fmtCap(s.capUsd)}</b></div>
             <div className="stat"><span>{s.capDeltaUsd >= 0 ? 'Ganó hoy' : 'Perdió hoy'}</span><b className={`pl-num pl-${dir(s.capDeltaUsd)}`}>{fmtCapDelta(s.capDeltaUsd)}</b></div>
           </div>
           <p className="pl-lede">{summary}</p>
@@ -57,7 +57,7 @@ export default async function MarketPage({ params }: { params: { id: string } })
         <hr className="rule" />
         <section className="sec"><div className="sechead"><span className="pl-eyebrow">Las que más pesan</span><h2>{m.id === 'cr' ? 'Las monedas más grandes' : 'Las empresas más grandes'}</h2><p>Ordenadas por valor de mercado.</p></div>
           <StockList rows={s.largest.map(toRow)} ranked />
-          {s.count > s.largest.length && <div><Link className="pl-btn primary" href={`/explorar?m=${m.id}`}>Ver las {s.count.toLocaleString('es-AR')} {unit} de {m.name}</Link></div>}
+          {s.count > s.largest.length && <div><Link className="pl-btn primary" href={`/explorar?m=${m.id}`}>Ver las {s.count} principales {unit} de {m.name}</Link></div>}
         </section>
       </main>
     </LiveProvider>

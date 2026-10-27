@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase/server';
 import { supabaseAdmin } from '@/lib/supabase/admin';
-import { getDaily, getFx, getGrades, getPriceTarget, getProfile, getQuotes, getRatios, type Quote } from '@/lib/fmp';
+import { getDaily, getFx, getGrades, getPriceTarget, getProfile, getQuotes, getRatios, type Quote } from '@/lib/yahoo';
 import { riskLevel, sectorEs } from '@/lib/sectors';
 import { isoDaysAgo, technicals } from '@/lib/technicals';
 import { aiEnabled, askJSON, askText, MODEL } from '@/lib/ai';

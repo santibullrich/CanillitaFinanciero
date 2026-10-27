@@ -7,7 +7,7 @@ export function logoUrl(opts: { symbol: string; name?: string; website?: string;
   if (opts.website) {
     try { return `${base}/${new URL(opts.website).hostname.replace(/^www\./, '')}${q}`; } catch { /* sigue */ }
   }
-  if (opts.crypto) return `${base}/crypto/${opts.symbol.replace(/USD$/, '').toLowerCase()}${q}`;
+  if (opts.crypto) return `${base}/crypto/${opts.symbol.replace(/-?USD$/, '').toLowerCase()}${q}`;
   if (!opts.symbol.includes('.') && !opts.symbol.startsWith('^')) return `${base}/ticker/${encodeURIComponent(opts.symbol)}${q}`;
   if (opts.name) return `${base}/name/${encodeURIComponent(opts.name)}${q}`;
   return null;

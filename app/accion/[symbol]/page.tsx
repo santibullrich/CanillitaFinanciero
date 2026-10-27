@@ -7,7 +7,7 @@ import LivePrice from '@/components/LivePrice';
 import Logo from '@/components/Logo';
 import PriceChart from '@/components/PriceChart';
 import { LiveProvider } from '@/components/Live';
-import { getGrades, getPriceTarget, getProfile, getQuote, getRatios } from '@/lib/fmp';
+import { getGrades, getPriceTarget, getProfile, getQuote, getRatios } from '@/lib/yahoo';
 import { marketById, marketOfSymbol } from '@/lib/markets';
 import { bigNum, fmtCap, fmtPrice, nf } from '@/lib/format';
 import { supabaseServer } from '@/lib/supabase/server';
@@ -35,7 +35,7 @@ export default async function StockPage({ params }: { params: { symbol: string }
   let loggedIn = false;
   try { loggedIn = !!(await supabaseServer().auth.getUser()).data.user; } catch { /* sin Supabase */ }
 
-  const cur = crypto ? 'USD' : profile?.currency || m.currency;
+  const cur = quote.currency || profile?.currency || m.currency;
   const up = quote.changePct >= 0;
   const buy = grades ? grades.strongBuy + grades.buy : 0;
   const total = grades ? buy + grades.hold + grades.sell + grades.strongSell : 0;

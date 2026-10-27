@@ -1,4 +1,4 @@
-import type { Point } from './fmp';
+import type { Point } from './yahoo';
 
 export type Technicals = {
   ret1m: number | null;

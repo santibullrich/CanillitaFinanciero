@@ -1,4 +1,4 @@
-/** Rubros de FMP traducidos al castellano. */
+/** Rubros de Yahoo Finance traducidos al castellano. */
 const ES: Record<string, string> = {
   Technology: 'Tecnología', 'Financial Services': 'Finanzas', Energy: 'Energía', Healthcare: 'Salud',
   'Consumer Cyclical': 'Consumo', 'Consumer Defensive': 'Consumo básico', Industrials: 'Industria', 'Basic Materials': 'Materiales',

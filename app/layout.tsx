@@ -4,7 +4,7 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import { themeInit } from '@/components/ThemeToggle';
 import { supabaseServer } from '@/lib/supabase/server';
-import { getQuotes } from '@/lib/fmp';
+import { getQuotes } from '@/lib/yahoo';
 import { MARKETS } from '@/lib/markets';
 import { dir, fmtPct, nf } from '@/lib/format';
 
@@ -57,7 +57,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <span className="pl-wordmark"><i /><span className="stack"><b>Canillita</b><span>Financiero</span></span></span>
           <p className="bajada">Todas las noticias del mercado mundial, contadas para que las entiendan Don Carlos y Doña Rosa.</p>
           <p>Nada de lo que ves es un consejo de inversión. Antes de invertir, informate y elegí lo que tenga sentido para vos. Los precios pueden tener demora según la bolsa.</p>
-          <p>Datos de mercado: Financial Modeling Prep. <a href="https://logo.dev" target="_blank" rel="noopener noreferrer">Logos provistos por Logo.dev</a>.</p>
+          <p>Datos de mercado: Yahoo Finance (pueden tener demora). <a href="https://logo.dev" target="_blank" rel="noopener noreferrer">Logos provistos por Logo.dev</a>.</p>
         </div></footer>
       </body>
     </html>

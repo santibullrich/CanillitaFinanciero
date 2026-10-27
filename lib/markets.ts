@@ -5,9 +5,9 @@ export type Market = {
   name: string;
   nick: string;
   city: string;
-  index: string;            // símbolo del índice en FMP
+  index: string;            // símbolo del índice en Yahoo Finance
   indexName: string;
-  exchanges: string[];      // códigos de bolsa de FMP (batch-exchange-quote)
+  exchanges: string[];      // bolsas que agrupa (solo informativo)
   currency: string;         // moneda del valor de mercado
   quoteCurrency?: string;   // moneda del precio si es distinta (Londres cotiza en peniques)
   minCap: number;           // valor de mercado mínimo (USD) para entrar en los rankings
@@ -48,7 +48,7 @@ export const MARKETS: Market[] = [
     context: 'El corazón mundial de los chips. TSMC fabrica los procesadores de buena parte del planeta.' },
   { id: 'au', name: 'Australia', nick: 'Sídney', city: 'Sídney', index: '^AXJO', indexName: 'S&P/ASX 200', exchanges: ['ASX'], currency: 'AUD', minCap: 5e9, hours: [0, 6], lonLat: [151.2, -33.9], label: 'l',
     context: 'Minería y bancos. Le va bien cuando China compra mucho hierro y carbón.' },
-  { id: 'cr', name: 'Cripto', nick: 'El mundo cripto', city: '', index: 'BTCUSD', indexName: 'Bitcoin', exchanges: [], currency: 'USD', minCap: 1e9,
+  { id: 'cr', name: 'Cripto', nick: 'El mundo cripto', city: '', index: 'BTC-USD', indexName: 'Bitcoin', exchanges: [], currency: 'USD', minCap: 1e9,
     context: 'Opera las 24 horas, todos los días. Se mueve mucho más que las acciones y Bitcoin arrastra al resto.' }
 ];
 
@@ -60,11 +60,10 @@ const SUFFIX: [RegExp, MarketId][] = [
   [/\.HK$/, 'hk'], [/\.T$/, 'jp'], [/\.(KS|KQ)$/, 'kr'], [/\.(TW|TWO)$/, 'tw'], [/\.AX$/, 'au']
 ];
 
-/** Mercado de un símbolo según su sufijo en FMP. Devuelve 'xx' para bolsas que la app todavía no agrupa. */
+/** Mercado de un símbolo según su sufijo en Yahoo Finance. Devuelve 'xx' para bolsas que la app todavía no agrupa. */
 export function marketOfSymbol(symbol: string, exchange?: string): MarketId | 'xx' {
   const s = symbol.toUpperCase();
-  if (exchange === 'CRYPTO') return 'cr';
-  if (!exchange && /^[A-Z0-9]{2,10}USD$/.test(s) && !s.includes('.')) return 'cr';
+  if (exchange === 'CRYPTO' || exchange === 'CCC' || /-USD$/.test(s)) return 'cr';
   for (const [re, id] of SUFFIX) if (re.test(s)) return id;
   if (s.includes('.')) return 'xx';
   return 'us';

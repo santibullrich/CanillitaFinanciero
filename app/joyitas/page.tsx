@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import Flag from '@/components/Flag';
 import Logo from '@/components/Logo';
-import { getGrades, getPriceTarget, getQuotes } from '@/lib/fmp';
+import { getGrades, getPriceTarget, getQuotes } from '@/lib/yahoo';
 import { UNIVERSE } from '@/lib/themes';
 import { marketById, marketOfSymbol } from '@/lib/markets';
 import { nf, symbolPath } from '@/lib/format';

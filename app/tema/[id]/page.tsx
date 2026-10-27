@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import Badge from '@/components/Badge';
 import { LiveProvider } from '@/components/Live';
 import { StockList } from '@/components/StockRow';
-import { getQuotes } from '@/lib/fmp';
+import { getQuotes } from '@/lib/yahoo';
 import { THEMES, themeById } from '@/lib/themes';
 import { marketById, marketOfSymbol } from '@/lib/markets';
 

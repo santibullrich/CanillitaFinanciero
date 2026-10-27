@@ -16,7 +16,8 @@ function Chart({ pts, range }: { pts: P[]; range: string }) {
   const line = vals.map((v, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1)).join('');
   const lx = x(vals.length - 1), ly = y(vals[vals.length - 1]);
   const d = (v: number) => nf(v >= 1000 ? 0 : v < 1 ? 4 : 2).format(v);
-  const fmtT = (t: string) => range === '1D' ? t.slice(11, 16) : new Date(t.slice(0, 10) + 'T12:00:00').toLocaleDateString('es-AR', range === '1A' ? { month: 'short' } : { day: 'numeric', month: 'short' });
+  const tz = 'America/Argentina/Buenos_Aires';
+  const fmtT = (t: string) => range === '1D' ? new Date(t).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', timeZone: tz }) : new Date(t).toLocaleDateString('es-AR', range === '1A' ? { month: 'short', timeZone: tz } : { day: 'numeric', month: 'short', timeZone: tz });
   const ticks = [0, Math.floor((pts.length - 1) / 2), pts.length - 1];
   return (
     <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Evolución del precio ${LABEL[range]}`}>

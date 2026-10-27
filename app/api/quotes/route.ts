@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getFx, getQuotes } from '@/lib/fmp';
+import { getFx, getQuotes } from '@/lib/yahoo';
 
 export async function GET(req: Request) {
   const sp = new URL(req.url).searchParams;

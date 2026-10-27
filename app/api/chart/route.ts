@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDaily, getIntraday } from '@/lib/fmp';
+import { getDaily, getIntraday } from '@/lib/yahoo';
 import { isoDaysAgo } from '@/lib/technicals';
 
 export async function GET(req: Request) {

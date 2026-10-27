@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getProfile } from '@/lib/fmp';
+import { getProfile } from '@/lib/yahoo';
 import { marketOfSymbol } from '@/lib/markets';
 import { riskLevel, sectorEs } from '@/lib/sectors';
 

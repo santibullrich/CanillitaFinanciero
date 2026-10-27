@@ -37,5 +37,5 @@ export const themeById = (id: string) => THEMES.find((t) => t.id === id);
 export const UNIVERSE = Array.from(new Set([
   ...THEMES.flatMap((t) => t.symbols),
   'BRK-B', 'LLY', 'V', 'MA', 'UNH', 'COST', 'WMT', 'NFLX', 'TSLA', 'ORCL', 'CRM', 'ADBE', 'MELI', 'GGAL', 'BMA', 'NU',
-  'SAP', 'ASML', 'NVO', 'MC.PA', 'SIE.DE', '7203.T', '8306.T', '1211.HK', 'BTCUSD', 'ETHUSD', 'SOLUSD'
+  'SAP', 'ASML', 'NVO', 'MC.PA', 'SIE.DE', '7203.T', '8306.T', '1211.HK', 'BTC-USD', 'ETH-USD', 'SOL-USD'
 ]));

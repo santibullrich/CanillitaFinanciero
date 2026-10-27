@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getQuotes, search } from '@/lib/fmp';
+import { getQuotes, search } from '@/lib/yahoo';
 import { marketOfSymbol } from '@/lib/markets';
 
 export async function GET(req: Request) {
@@ -12,6 +12,8 @@ export async function GET(req: Request) {
     const results = hits.map((h) => ({
       ...h,
       market: marketOfSymbol(h.symbol, h.exchange),
+      currency: bySym.get(h.symbol)?.currency ?? h.currency,
+      name: bySym.get(h.symbol)?.name ?? h.name,
       price: bySym.get(h.symbol)?.price ?? null,
       changePct: bySym.get(h.symbol)?.changePct ?? null
     }));
