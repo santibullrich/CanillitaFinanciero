@@ -14,10 +14,16 @@ export const fmtPct = (c: number | null | undefined) =>
 export const absPct = (c: number) => nf(Math.abs(c) >= 10 ? 1 : 2).format(Math.abs(c)) + '%';
 export const dir = (c: number | null | undefined) => (c == null ? 'flat' : c > 0.005 ? 'up' : c < -0.005 ? 'down' : 'flat');
 
+/** Escala que usamos en la app: millones, billones (mil millones) y trillones (mil billones). */
+export function bigNum(v: number) {
+  const a = Math.abs(v);
+  const u = (n: number, one: string, many: string) => { const t = nf(n >= 100 ? 0 : 1).format(n); return `${t} ${t === '1,0' || t === '1' ? one : many}`; };
+  return a >= 1e12 ? u(a / 1e12, 'trillón', 'trillones') : a >= 1e9 ? u(a / 1e9, 'billón', 'billones') : u(a / 1e6, 'millón', 'millones');
+}
+
 export function fmtCap(v: number | null | undefined) {
   if (v == null || !isFinite(v)) return '—';
-  const a = Math.abs(v);
-  return 'US$ ' + (a >= 1e12 ? nf(1).format(a / 1e12) + ' billones' : a >= 1e9 ? nf(0).format(a / 1e9) + ' mil millones' : nf(0).format(a / 1e6) + ' millones');
+  return 'US$ ' + bigNum(v);
 }
 export const fmtCapDelta = (v: number) => (v >= 0 ? '+' : '−') + fmtCap(v);
 export const usd = (v: number) => (v < 0 ? '−' : '') + 'US$ ' + nf(Math.abs(v) >= 1e4 ? 0 : 2).format(Math.abs(v));

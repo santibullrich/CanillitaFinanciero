@@ -9,7 +9,7 @@ import PriceChart from '@/components/PriceChart';
 import { LiveProvider } from '@/components/Live';
 import { getGrades, getPriceTarget, getProfile, getQuote, getRatios } from '@/lib/fmp';
 import { marketById, marketOfSymbol } from '@/lib/markets';
-import { fmtCap, fmtPrice, nf } from '@/lib/format';
+import { bigNum, fmtCap, fmtPrice, nf } from '@/lib/format';
 import { supabaseServer } from '@/lib/supabase/server';
 
 export const revalidate = 60;
@@ -97,7 +97,7 @@ export default async function StockPage({ params }: { params: { symbol: string }
           <div className="pl-list">
             {quote.dayLow != null && quote.dayHigh != null && <div className="pl-row"><span className="k">Rango de hoy</span><span className="v">{fmtPrice(quote.dayLow, cur)} – {fmtPrice(quote.dayHigh, cur)}</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>Lo más bajo y lo más alto que tocó en el día.</span></div>}
             {quote.yearLow != null && quote.yearHigh != null && <div className="pl-row"><span className="k">Rango del último año</span><span className="v">{fmtPrice(quote.yearLow, cur)} – {fmtPrice(quote.yearHigh, cur)}</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>Te muestra si hoy está cerca de su piso o de su techo.</span></div>}
-            {quote.marketCap != null && <div className="pl-row"><span className="k">Valor de mercado</span><span className="v">{cur === 'USD' ? fmtCap(quote.marketCap) : `${nf(0).format(quote.marketCap / 1e9)} mil millones (${cur})`}</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>{crypto ? 'Lo que valen juntas todas las monedas que existen.' : 'Lo que vale la empresa entera en la bolsa.'}</span></div>}
+            {quote.marketCap != null && <div className="pl-row"><span className="k">Valor de mercado</span><span className="v">{cur === 'USD' ? fmtCap(quote.marketCap) : `${bigNum(quote.marketCap)} (${cur})`}</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>{crypto ? 'Lo que valen juntas todas las monedas que existen.' : 'Lo que vale la empresa entera en la bolsa.'}</span></div>}
             {ratios?.pe != null && ratios.pe > 0 && <div className="pl-row"><span className="k">Precio / ganancia</span><span className="v">{nf(1).format(ratios.pe)} años</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>Cuántos años de ganancias pagás al comprarla. Menos suele ser más barato.</span></div>}
             {ratios?.dividendYield != null && ratios.dividendYield > 0 && <div className="pl-row"><span className="k">Dividendo</span><span className="v">{nf(1).format(ratios.dividendYield)}% al año</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>Lo que reparte por año a sus accionistas, sobre el precio de hoy.</span></div>}
             {quote.volume != null && <div className="pl-row"><span className="k">{crypto ? 'Operado hoy' : 'Acciones que cambiaron de mano'}</span><span className="v">{nf(1).format(quote.volume / 1e6)} M</span><span className="pl-meta" style={{ whiteSpace: 'normal' }}>Mucho movimiento indica interés o una noticia fuerte.</span></div>}
