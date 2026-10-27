@@ -32,7 +32,12 @@ Las claves `SUPABASE_SERVICE_ROLE_KEY`, `ANTHROPIC_API_KEY` y `FINNHUB_API_KEY` 
    1. Creá un proyecto.
    2. En *SQL Editor*, pegá el contenido de `supabase/schema.sql` y ejecutalo. Crea las tablas y la seguridad por fila (cada usuario ve solo lo suyo).
    3. En *Authentication → URL Configuration*, poné como *Site URL* la dirección de tu app (por ejemplo `https://canillita.vercel.app`) y agregá `https://canillita.vercel.app/auth/callback` y `http://localhost:3000/auth/callback` en *Redirect URLs*.
-   4. Opcional: en *Authentication → Providers* activá Google para el botón “Seguir con Google”.
+   4. Las cuentas se crean ya confirmadas (sin mail de confirmación), así que no hace falta configurar el envío de emails.
+   5. Opcional, **ingreso con Google** (el botón aparece solo cuando esto está activo):
+      1. En [Google Cloud Console](https://console.cloud.google.com/apis/credentials) creá un proyecto, configurá la *pantalla de consentimiento OAuth* (tipo *Externo*, publicada en *Producción*) y después *Crear credenciales → ID de cliente de OAuth → Aplicación web*.
+      2. En *URIs de redireccionamiento autorizados* poné `https://TU-PROYECTO.supabase.co/auth/v1/callback` (la URL de tu proyecto de Supabase + `/auth/v1/callback`).
+      3. Copiá el *Client ID* y el *Client secret* en Supabase → *Authentication → Sign In / Providers → Google* y activalo.
+      4. En Supabase → *Authentication → URL Configuration*, agregá `https://canillitafinanciero.vercel.app/**` en *Redirect URLs*.
 2. **Variables**: copiá `.env.example` como `.env.local` y completalo.
 3. **Probá los datos**: `npm install` y después `npm run check:datos`. Verifica que Yahoo Finance responda desde tu compu.
 4. **Corré la app**: `npm run dev` y abrí http://localhost:3000.

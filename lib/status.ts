@@ -2,6 +2,7 @@ import 'server-only';
 import { fetchQuotes, getCryptoTop, getDaily, getFx, getGrades, getIntraday, getNews, getProfile, search, getDayMovers, getMarketCaps, lastError } from './yahoo';
 import { supabaseAdmin } from './supabase/admin';
 import { finnhubError, fhRatios } from './finnhub';
+import { googleEnabled } from './authProviders';
 import { isoDaysAgo } from './technicals';
 
 export type Check = { name: string; ok: boolean; detail: string; fix?: string };
@@ -84,6 +85,8 @@ export async function runChecks() {
       db.push(error ? { name: `Tabla ${t}`, ok: false, detail: error.message, fix: 'Ejecutá supabase/schema.sql en Supabase → SQL Editor.' } : { name: `Tabla ${t}`, ok: true, detail: 'Existe' });
     }
   }
+  const g = await googleEnabled();
+  db.push(g ? { name: 'Ingreso con Google', ok: true, detail: 'Activado en Supabase' } : { name: 'Ingreso con Google', ok: false, detail: 'Desactivado: el botón no se muestra', fix: 'Creá un cliente OAuth en Google Cloud y activá Google en Supabase → Authentication → Sign In / Providers (pasos en el README).' });
   const all = [...env, ...data, ...db];
   return { at: new Date().toISOString(), ok: all.every((c) => c.ok), env, data, sources, db };
 }

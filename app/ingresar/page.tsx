@@ -1,8 +1,11 @@
 import AuthForm from '@/components/AuthForm';
+import { googleEnabled } from '@/lib/authProviders';
 
 export const metadata = { title: 'Ingresar · CanillitaFinanciero' };
 
-export default function Ingresar({ searchParams }: { searchParams: { volver?: string; error?: string } }) {
+export default async function Ingresar({ searchParams }: { searchParams: { volver?: string; error?: string } }) {
+  const google = await googleEnabled();
+  const errs: Record<string, string> = { link: 'El link venció o ya se usó. Ingresá con tu email y contraseña.', google: 'No pudimos ingresar con Google. Probá de nuevo o usá tu email.' };
   return (
     <section className="pl-atmo heroband"><div className="pl-hero"><div className="hero-grid">
       <div className="hero-copy pl-reveal">
@@ -15,7 +18,7 @@ export default function Ingresar({ searchParams }: { searchParams: { volver?: st
           <li><b>Asesor con IA.</b> Busca los puntos débiles de tu cartera y te propone cómo rotarla.</li>
         </ul>
       </div>
-      <AuthForm next={searchParams.volver || '/cartera'} initialError={searchParams.error ? 'El link venció o ya se usó. Ingresá con tu email y contraseña.' : undefined} />
+      <AuthForm next={searchParams.volver || '/cartera'} initialError={searchParams.error ? errs[searchParams.error] ?? errs.link : undefined} google={google} />
     </div></div></section>
   );
 }

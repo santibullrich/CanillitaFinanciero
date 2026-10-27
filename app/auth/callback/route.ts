@@ -9,7 +9,9 @@ export async function GET(req: Request) {
   if (code) {
     const sb = supabaseServer();
     const { error } = await sb.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(new URL(next.startsWith('/') ? next : '/cartera', url.origin));
+    if (!error) return NextResponse.redirect(new URL(next.startsWith('/') && !next.startsWith('//') ? next : '/cartera', url.origin));
+    console.error('[Auth] callback:', error.message);
   }
-  return NextResponse.redirect(new URL('/ingresar?error=link', url.origin));
+  if (url.searchParams.get('error')) console.error('[Auth] callback:', url.searchParams.get('error_description'));
+  return NextResponse.redirect(new URL(`/ingresar?error=${code || url.searchParams.get('error') ? 'google' : 'link'}`, url.origin));
 }
