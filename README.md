@@ -8,7 +8,7 @@ App web mobile first (Next.js 14) con:
 - Explorar: las principales acciones de cada mercado, ordenadas y por páginas.
 - Subas y bajas del día por mercado, y las empresas más grandes de cada bolsa.
 - Buscador de cualquier acción o cripto del mundo (todo lo que cubre Yahoo Finance).
-- Página de cada activo: precio en vivo, gráfico, “¿por qué se movió hoy?” explicado con IA a partir de las noticias, opinión de analistas y datos clave.
+- Página de cada activo: precio en vivo, gráfico, “¿por qué se movió hoy?” explicado con IA (Claude) cruzando noticias, fundamentos, análisis técnico, analistas y lo que hace su mercado.
 - Temas (IA, dividendos, espacio…) y joyitas de los analistas.
 - Cuentas de usuario, lista de seguimiento y cartera con ganancia total y del día en dólares.
 - Asesor con IA que busca debilidades en la cartera y propone rotaciones conservadora, moderada y arriesgada con fundamentos y análisis técnico.

@@ -1,42 +1,119 @@
 import { NextResponse } from 'next/server';
-import { getGrades, getNews, getPriceTarget, getQuote } from '@/lib/yahoo';
-import { aiEnabled, askJSON, MODEL_FAST } from '@/lib/ai';
+import { getDaily, getGrades, getNews, getPriceTarget, getProfile, getQuote, getRatios } from '@/lib/yahoo';
+import { aiEnabled, askJSON, MODEL } from '@/lib/ai';
 import { supabaseAdmin } from '@/lib/supabase/admin';
+import { isoDaysAgo, technicals } from '@/lib/technicals';
+import { marketById, marketOfSymbol } from '@/lib/markets';
+import { sectorEs } from '@/lib/sectors';
 
 export const maxDuration = 60;
 
-type Reason = { titulo: string; detalle: string };
+type Motivo = { tipo: 'noticias' | 'fundamentos' | 'tecnico' | 'analistas' | 'mercado'; titulo: string; detalle: string };
+type Body = { v: 2; resumen: string; motivos: Motivo[]; sources: { title: string; site: string; url: string }[]; usados: string[]; generated: boolean; changePct: number };
 
+const r1 = (v: number | null | undefined) => (v == null || !isFinite(v) ? null : Math.round(v * 10) / 10);
+
+/**
+ * "¿Por qué sube o baja hoy?": Claude cruza noticias, fundamentos, análisis técnico,
+ * opinión de analistas y lo que hace el mercado, y lo explica en simple.
+ * Se guarda una explicación por activo y por día; se rehace si el movimiento cambió mucho.
+ */
 export async function GET(_req: Request, { params }: { params: { symbol: string } }) {
   const symbol = decodeURIComponent(params.symbol).toUpperCase();
   const day = new Date().toISOString().slice(0, 10);
   const admin = supabaseAdmin();
 
+  const quote = await getQuote(symbol);
+  if (!quote) return NextResponse.json({ error: 'No encontramos ese activo.' }, { status: 404 });
+
   if (admin) {
     const { data } = await admin.from('ai_explanations').select('body').eq('symbol', symbol).eq('day', day).maybeSingle();
-    if (data?.body) return NextResponse.json(data.body);
+    const b = data?.body as Body | undefined;
+    // Se reutiliza si es del formato actual y el movimiento no cambió de signo ni más de 1,5 puntos.
+    if (b?.v === 2 && Math.sign(b.changePct) === Math.sign(quote.changePct) && Math.abs(b.changePct - quote.changePct) < 1.5) return NextResponse.json(b);
   }
 
-  const [quote, news, grades, target] = await Promise.all([getQuote(symbol), getNews(symbol, 8), getGrades(symbol), getPriceTarget(symbol)]);
-  if (!quote) return NextResponse.json({ error: 'No encontramos ese activo.' }, { status: 404 });
+  const mId = marketOfSymbol(symbol, quote.exchange);
+  const market = marketById(mId);
+  const crypto = mId === 'cr';
+  const [news, grades, target, ratios, profile, daily, index] = await Promise.all([
+    getNews(symbol, 8),
+    crypto ? null : getGrades(symbol),
+    crypto ? null : getPriceTarget(symbol),
+    crypto ? null : getRatios(symbol),
+    crypto ? null : getProfile(symbol),
+    getDaily(symbol, isoDaysAgo(370)),
+    market && market.index !== symbol ? getQuote(market.index) : Promise.resolve(null)
+  ]);
+  const t = technicals(daily, quote.price);
   const sources = news.slice(0, 5).map((n) => ({ title: n.title, site: n.site, url: n.url }));
 
-  if (!aiEnabled() || !news.length) {
-    return NextResponse.json({ reasons: [], sources, generated: false });
+  const totalG = grades ? grades.strongBuy + grades.buy + grades.hold + grades.sell + grades.strongSell : 0;
+  const datos = {
+    activo: { nombre: quote.name, ticker: symbol, mercado: market?.name ?? 'Otros', rubro: crypto ? 'Cripto' : profile?.sector ? sectorEs(profile.sector) : null, moneda: quote.currency },
+    hoy: { cambio_pct: r1(quote.changePct), precio: quote.price, cierre_anterior: quote.previousClose, minimo_dia: quote.dayLow, maximo_dia: quote.dayHigh },
+    mercado: index ? { indice: market?.indexName, cambio_pct_hoy: r1(index.changePct) } : null,
+    tecnico: {
+      rendimiento_1_mes_pct: t.ret1m, rendimiento_1_anio_pct: t.ret1y, distancia_al_maximo_anual_pct: t.distHigh1y, distancia_al_minimo_anual_pct: t.distLow1y,
+      sobre_media_50_dias: t.aboveSma50, sobre_media_200_dias: t.aboveSma200, rsi_14: t.rsi14, volatilidad_anual_pct: t.volAnnual
+    },
+    fundamentos: crypto ? null : { pe: r1(ratios?.pe), dividendo_pct: r1(ratios?.dividendYield), beta: r1(profile?.beta) },
+    analistas: crypto || !totalG ? null : {
+      cantidad: totalG, dicen_comprar: grades!.strongBuy + grades!.buy, dicen_mantener: grades!.hold, dicen_vender: grades!.sell + grades!.strongSell,
+      precio_objetivo: target?.consensus ?? null, potencial_pct: target?.consensus && quote.price ? r1((target.consensus / quote.price - 1) * 100) : null
+    },
+    noticias: news.map((n) => ({ titulo: n.title, fuente: n.site, fecha: n.date.slice(0, 10) }))
+  };
+  const usados = [
+    news.length ? 'Noticias' : '',
+    datos.fundamentos && (datos.fundamentos.pe != null || datos.fundamentos.dividendo_pct != null) ? 'Fundamentos' : '',
+    t.rsi14 != null ? 'Análisis técnico' : '',
+    datos.analistas ? 'Analistas' : '',
+    datos.mercado ? 'Mercado' : ''
+  ].filter(Boolean);
+
+  if (!aiEnabled()) {
+    return NextResponse.json({ v: 2, resumen: '', motivos: [], sources, usados, generated: false, changePct: quote.changePct } satisfies Body);
   }
 
+  const sube = quote.changePct >= 0;
+  const prompt = `Sos el analista de CanillitaFinanciero, una app argentina que explica la bolsa a gente común (pensá en Don Carlos y Doña Rosa).
+${quote.name} (${symbol}) ${sube ? 'sube' : 'baja'} ${Math.abs(quote.changePct).toFixed(2)}% hoy.
+
+Tu tarea: explicar POR QUÉ se mueve hoy, cruzando estas cinco fuentes y quedándote con las que de verdad explican el movimiento:
+1. Noticias del día y de los últimos días.
+2. Fundamentos (P/E, dividendo, beta).
+3. Análisis técnico (tendencia de 1 mes y 1 año, medias de 50 y 200 días, RSI: más de 70 = sobrecomprada, menos de 30 = sobrevendida; cercanía a máximos o mínimos del año).
+4. Opinión de los analistas (consenso y precio objetivo).
+5. Lo que hace su mercado hoy (si todo el índice se mueve parecido, gran parte del movimiento es general y no de la empresa).
+
+Reglas:
+- Usá SOLO los datos de abajo. Si un dato es null, no existe: no lo menciones ni lo inventes.
+- Ordená los motivos del más al menos importante. Citá números concretos.
+- Si las noticias no explican el movimiento, decilo con honestidad y apoyate en el mercado y el técnico.
+- Español rioplatense con voseo, frases cortas, sin jerga. Si usás un término técnico (RSI, P/E, media móvil), explicalo en pocas palabras.
+- No recomiendes comprar ni vender.
+
+Datos (JSON):
+${JSON.stringify(datos)}
+
+Formato JSON:
+{"resumen":"1 o 2 frases que respondan por qué se mueve hoy","motivos":[{"tipo":"noticias|fundamentos|tecnico|analistas|mercado","titulo":"máx. 8 palabras","detalle":"1 o 2 frases con números"}]}
+Entre 2 y 4 motivos.`;
+
   try {
-    const prompt = `Sos el redactor de CanillitaFinanciero, una app argentina que explica la bolsa a gente común (Don Carlos y Doña Rosa). Español rioplatense con voseo, frases cortas, sin jerga.
-${quote.name} (${symbol}) ${quote.changePct >= 0 ? 'sube' : 'baja'} ${quote.changePct.toFixed(2)}% hoy.
-Titulares recientes: ${JSON.stringify(news.map((n) => ({ titulo: n.title, fuente: n.site, fecha: n.date })))}
-Consenso de analistas: ${JSON.stringify(grades)}. Precio objetivo: ${JSON.stringify(target)}. Precio actual: ${quote.price}.
-Explicá por qué se mueve hoy en 2 o 3 motivos, usando SOLO estos datos. Si los titulares no explican el movimiento, decilo con honestidad en un motivo.
-Formato JSON: {"reasons":[{"titulo":"máx. 8 palabras","detalle":"1 o 2 frases"}]}`;
-    const out = await askJSON<{ reasons: Reason[] }>(prompt, { model: MODEL_FAST, maxTokens: 600 });
-    const body = { reasons: (out.reasons ?? []).slice(0, 3), sources, generated: true };
+    const out = await askJSON<{ resumen: string; motivos: Motivo[] }>(prompt, { model: MODEL, maxTokens: 900 });
+    const tipos = ['noticias', 'fundamentos', 'tecnico', 'analistas', 'mercado'];
+    const body: Body = {
+      v: 2,
+      resumen: String(out.resumen ?? ''),
+      motivos: (out.motivos ?? []).filter((m) => m?.titulo).slice(0, 4).map((m) => ({ ...m, tipo: (tipos.includes(m.tipo) ? m.tipo : 'mercado') as Motivo['tipo'] })),
+      sources, usados, generated: true, changePct: quote.changePct
+    };
     if (admin) await admin.from('ai_explanations').upsert({ symbol, day, body });
     return NextResponse.json(body);
-  } catch {
-    return NextResponse.json({ reasons: [], sources, generated: false });
+  } catch (e: any) {
+    console.error(`[IA] explicación ${symbol}: ${String(e?.message ?? e).slice(0, 200)}`);
+    return NextResponse.json({ v: 2, resumen: '', motivos: [], sources, usados, generated: false, changePct: quote.changePct } satisfies Body);
   }
 }

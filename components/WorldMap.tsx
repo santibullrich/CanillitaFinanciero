@@ -5,7 +5,7 @@ import Flag from './Flag';
 import { MAP, landDots, lonLatToCell } from '@/lib/worldmask';
 import { dir, fmtPct } from '@/lib/format';
 
-export type Pin = { id: string; city: string; changePct: number; lonLat: [number, number]; label: string };
+export type Pin = { id: string; city: string; changePct: number; lonLat: [number, number]; label: string; minor?: boolean };
 const ARCS: [string, string][] = [['ar', 'br'], ['br', 'us'], ['mx', 'us'], ['ca', 'us'], ['us', 'uk'], ['uk', 'eu'], ['eu', 'in'], ['in', 'hk'], ['hk', 'jp'], ['hk', 'au']];
 const COL: Record<string, number[]> = { up: [75, 208, 143], down: [255, 107, 107], flat: [201, 196, 186] };
 
@@ -69,7 +69,7 @@ export default function WorldMap({ pins }: { pins: Pin[] }) {
           })}
         </svg>
         {pins.map((p, i) => (
-          <Link key={p.id} className={`mpin ${dir(p.changePct)}`} href={`/mercado/${p.id}`} style={{ ...pos(p), animationDelay: `${0.9 + i * 0.12}s` }} aria-label={p.city}>
+          <Link key={p.id} className={`mpin ${dir(p.changePct)}${p.minor ? ' minor' : ''}`} href={`/mercado/${p.id}`} style={{ ...pos(p), animationDelay: `${0.9 + i * 0.12}s` }} aria-label={p.city}>
             <span className="ring" /><span className="core" />
             <span className={`lab ${p.label}`}><Flag id={p.id} /><b>{p.city}</b><span className="pl-num">{fmtPct(p.changePct)}</span></span>
           </Link>

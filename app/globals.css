@@ -459,6 +459,8 @@ main{display:grid;gap:var(--space-12);padding-block:0 var(--space-12)}
 .reasons b{display:block;font-size:16px}
 .reasons span{color:var(--ink-muted);font-size:15px}
 .src{font-size:13px;color:var(--ink-muted)}
+.xsum{font-size:18px;line-height:1.45;margin:0 0 16px;color:var(--ink)}
+.xtag{display:inline-block;font-style:normal;font-family:var(--font-mono,monospace);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-muted);margin-bottom:2px}
 .say{font-family:var(--font-display);font-weight:700;font-size:26px;line-height:1.1;text-wrap:balance}
 .target{position:relative;height:56px;margin:4px 22px 0}
 .target .rail2{position:absolute;left:0;right:0;top:24px;height:6px;border-radius:3px;background:var(--line)}
@@ -666,3 +668,11 @@ footer.foot .bajada{font-size:17px;color:var(--ground)}
 .status-row{grid-template-columns:64px minmax(0,1fr)}
 .status-row .pl-badge{grid-row:span 2;align-self:start;justify-content:center}
 .status-row .pl-meta{grid-column:2}
+
+/* Etiquetas del mapa: más posiciones para que no se pisen */
+.mpin .lab.tr{bottom:10px;left:-6px}
+.mpin .lab.bl{top:10px;right:-6px}
+.mpin .lab.br{top:10px;left:-6px}
+.mpin:hover,.mpin:focus-visible{z-index:5}
+@media(max-width:759px){.mpin.minor .lab{display:none}}
+@media(max-width:759px){.mpin .lab .flag{display:none}}

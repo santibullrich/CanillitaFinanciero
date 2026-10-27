@@ -26,7 +26,7 @@ export default async function Home() {
   const worst = [...geo].sort((a, b) => a.changePct - b.changePct)[0];
   const top = w.gainers[0];
   const [pre, hl, post] = worldTitle(w.avg);
-  const pins: Pin[] = geo.filter((s) => s.market.lonLat).map((s) => ({ id: s.market.id, city: s.market.city, changePct: s.changePct, lonLat: s.market.lonLat!, label: s.market.label ?? 'r' }));
+  const pins: Pin[] = geo.filter((s) => s.market.lonLat).map((s) => ({ id: s.market.id, city: s.market.city, changePct: s.changePct, lonLat: s.market.lonLat!, label: s.market.label ?? 'r', minor: s.market.minor }));
   const liveSymbols = [...w.gainers, ...w.losers].map((q) => q.symbol);
 
   return (
