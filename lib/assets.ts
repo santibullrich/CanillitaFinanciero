@@ -18,6 +18,8 @@ export const ASSET_LIST: AssetBase[] = [
   { t: 'SCHD', name: 'Schwab U.S. Dividend Equity ETF', kind: 'etf', risk: 1, why: '100 empresas sólidas que pagan y suben sus dividendos.', fallback: 11 },
   { t: 'VYM', name: 'Vanguard High Dividend Yield ETF', kind: 'etf', risk: 1, why: 'Empresas maduras que reparten mucha ganancia.', fallback: 10 },
   { t: 'VNQ', name: 'Vanguard Real Estate ETF', kind: 'etf', risk: 2, why: 'Inmobiliarias que cotizan en bolsa y reparten alquileres.', fallback: 5 },
+  { t: 'TLT', name: 'iShares 20+ Year Treasury Bond ETF', kind: 'etf', risk: 2, why: 'Bonos del Tesoro a largo plazo: suben fuerte cuando la economía se frena.', fallback: -1 },
+  { t: 'DBC', name: 'Invesco DB Commodity Index ETF', kind: 'etf', risk: 3, why: 'Petróleo, metales y granos: sube cuando hay inflación.', fallback: 4 },
   { t: 'GLD', name: 'SPDR Gold Shares', kind: 'etf', risk: 2, why: 'Oro: el refugio cuando hay miedo o inflación.', fallback: 10 },
   // Empresas
   { t: 'JNJ', name: 'Johnson & Johnson', kind: 'stock', risk: 1, why: 'Salud: remedios y equipos que se usan siempre.', fallback: 8 },
@@ -37,48 +39,47 @@ export const ASSET_LIST: AssetBase[] = [
   { t: 'ETH-USD', name: 'Ethereum', kind: 'crypto', risk: 4, why: 'La red de las apps cripto. Muy volátil.', fallback: 45 }
 ];
 
+/** Clase de cada activo, para pintar la barra de reparto de las carteras. */
+export const ASSET_CLASS: Record<string, 'bonos' | 'eeuu' | 'mundo' | 'oro' | 'inmuebles' | 'materias' | 'empresa' | 'cripto'> = {
+  BND: 'bonos', SGOV: 'bonos', SCHP: 'bonos', IEF: 'bonos', TLT: 'bonos',
+  VTI: 'eeuu', SPY: 'eeuu', SCHD: 'eeuu', VYM: 'eeuu', VXUS: 'mundo', VWO: 'mundo',
+  VNQ: 'inmuebles', GLD: 'oro', DBC: 'materias', 'BTC-USD': 'cripto', 'ETH-USD': 'cripto'
+};
+export const CLASS_LABEL = { bonos: 'Bonos', eeuu: 'Acciones EE.UU.', mundo: 'Resto del mundo', oro: 'Oro', inmuebles: 'Inmuebles', materias: 'Materias primas', empresa: 'Empresas', cripto: 'Cripto' } as const;
+
 /**
- * Tres carteras modelo de 10 activos, basadas en cómo arman carteras los profesionales:
- * - Conservadora: estilo Vanguard LifeStrategy Conservative (≈40% acciones / 60% bonos y refugio)
- *   con ideas del All Weather de Ray Dalio (bonos del Tesoro y oro) y de David Swensen (bonos que ajustan por inflación).
- * - Moderada: la cartera de tres fondos de John Bogle (EE.UU. + mundo + bonos) llevada a ≈70/30,
- *   con inmobiliarias como Swensen, algo de oro y un 2% de bitcoin (el rango de 1-2% que sugiere BlackRock).
- * - Arriesgada: ≈90% acciones, base amplia más las empresas de inteligencia artificial y emergentes
- *   que destaca la perspectiva 2026 de BlackRock, y bitcoin como apuesta acotada.
+ * Seis carteras modelo, dos por nivel de riesgo, basadas en cómo arman carteras los profesionales:
+ * Vanguard (LifeStrategy), John Bogle (tres fondos), David Swensen (Yale), Ray Dalio (All Weather)
+ * y la perspectiva 2026 de BlackRock (IA, emergentes y 1-2% en bitcoin para carteras diversificadas).
  */
-export type ModelPortfolio = { id: 'conservador' | 'medio' | 'alto'; profile: 'conservador' | 'moderado' | 'arriesgado'; label: string; idea: string; mix: { t: string; pct: number; role: string }[] };
+export type ModelPortfolio = { id: string; cat: 'conservador' | 'medio' | 'alto'; profile: 'conservador' | 'moderado' | 'arriesgado'; name: string; by: string; idea: string; mix: { t: string; pct: number }[] };
 export const PORTFOLIOS: ModelPortfolio[] = [
-  {
-    id: 'conservador', profile: 'conservador', label: 'Conservador',
-    idea: 'Cuidar la plata primero. Más de la mitad en bonos, letras y oro para que las caídas duelan poco, y el resto en empresas estables que pagan dividendos.',
-    mix: [
-      { t: 'BND', pct: 20, role: 'Base de bonos' }, { t: 'VTI', pct: 15, role: 'Todo EE.UU.' }, { t: 'SGOV', pct: 10, role: 'Colchón que rinde' },
-      { t: 'IEF', pct: 10, role: 'Seguro para crisis' }, { t: 'SCHP', pct: 10, role: 'Contra la inflación' }, { t: 'SCHD', pct: 10, role: 'Dividendos' },
-      { t: 'VXUS', pct: 8, role: 'Resto del mundo' }, { t: 'GLD', pct: 7, role: 'Refugio' }, { t: 'JNJ', pct: 5, role: 'Salud estable' }, { t: 'KO', pct: 5, role: 'Consumo estable' }
-    ]
-  },
-  {
-    id: 'medio', profile: 'moderado', label: 'Riesgo medio',
-    idea: 'Crecer sin sobresaltos grandes. Siete de cada diez dólares en acciones de todo el mundo y tres en bonos, inmobiliarias y oro, más una pizca de bitcoin.',
-    mix: [
-      { t: 'VTI', pct: 34, role: 'Todo EE.UU.' }, { t: 'VXUS', pct: 15, role: 'Resto del mundo' }, { t: 'BND', pct: 15, role: 'Base de bonos' },
-      { t: 'BRK-B', pct: 7, role: 'Estilo Buffett' }, { t: 'MSFT', pct: 7, role: 'Tecnología sólida' }, { t: 'SCHP', pct: 5, role: 'Contra la inflación' },
-      { t: 'VNQ', pct: 5, role: 'Inmobiliario' }, { t: 'VWO', pct: 5, role: 'Emergentes' }, { t: 'GLD', pct: 5, role: 'Refugio' }, { t: 'BTC-USD', pct: 2, role: 'Pizca de cripto' }
-    ]
-  },
-  {
-    id: 'alto', profile: 'arriesgado', label: 'Riesgo alto',
-    idea: 'Buscar el mayor crecimiento a largo plazo, aceptando caídas fuertes en el camino. Casi todo en acciones: una base amplia y las empresas de la inteligencia artificial.',
-    mix: [
-      { t: 'VTI', pct: 32, role: 'Base amplia' }, { t: 'NVDA', pct: 10, role: 'Chips de IA' }, { t: 'VWO', pct: 10, role: 'Emergentes' },
-      { t: 'MSFT', pct: 8, role: 'Nube e IA' }, { t: 'BTC-USD', pct: 8, role: 'Cripto' }, { t: 'GOOGL', pct: 7, role: 'Buscador e IA' },
-      { t: 'AMZN', pct: 7, role: 'Comercio y nube' }, { t: 'MELI', pct: 7, role: 'América Latina' }, { t: 'TSM', pct: 6, role: 'Fábrica de chips' }, { t: 'AVGO', pct: 5, role: 'Redes para IA' }
-    ]
-  }
+  { id: 'colchon', cat: 'conservador', profile: 'conservador', name: 'Colchón que rinde', by: 'Estilo Vanguard 30/70',
+    idea: 'Siete de cada diez dólares en bonos y letras para que las caídas duelan poco.',
+    mix: [{ t: 'BND', pct: 30 }, { t: 'SGOV', pct: 20 }, { t: 'VTI', pct: 15 }, { t: 'SCHP', pct: 10 }, { t: 'SCHD', pct: 10 }, { t: 'VXUS', pct: 5 }, { t: 'GLD', pct: 5 }, { t: 'JNJ', pct: 5 }] },
+  { id: 'todoclima', cat: 'conservador', profile: 'conservador', name: 'Todo clima', by: 'Inspirada en Ray Dalio',
+    idea: 'Repartida para aguantar crecimiento, recesión, inflación o deflación.',
+    mix: [{ t: 'TLT', pct: 40 }, { t: 'VTI', pct: 30 }, { t: 'IEF', pct: 15 }, { t: 'GLD', pct: 8 }, { t: 'DBC', pct: 7 }] },
+  { id: 'bogle', cat: 'medio', profile: 'moderado', name: 'Tres fondos', by: 'John Bogle, 70/30',
+    idea: 'Todo EE.UU., todo el mundo y bonos. Simple, barata y difícil de mejorar.',
+    mix: [{ t: 'VTI', pct: 42 }, { t: 'BND', pct: 30 }, { t: 'VXUS', pct: 28 }] },
+  { id: 'yale', cat: 'medio', profile: 'moderado', name: 'Estilo Yale', by: 'David Swensen',
+    idea: 'Acciones del mundo, inmobiliarias y bonos del Tesoro que se ajustan por inflación.',
+    mix: [{ t: 'VTI', pct: 30 }, { t: 'VNQ', pct: 20 }, { t: 'VXUS', pct: 15 }, { t: 'IEF', pct: 15 }, { t: 'SCHP', pct: 15 }, { t: 'VWO', pct: 5 }] },
+  { id: 'ia', cat: 'alto', profile: 'arriesgado', name: 'Crecimiento con IA', by: 'Temas de BlackRock 2026',
+    idea: 'Una base amplia y las empresas que construyen la inteligencia artificial.',
+    mix: [{ t: 'VTI', pct: 40 }, { t: 'NVDA', pct: 10 }, { t: 'MSFT', pct: 10 }, { t: 'GOOGL', pct: 8 }, { t: 'AMZN', pct: 8 }, { t: 'TSM', pct: 7 }, { t: 'AVGO', pct: 7 }, { t: 'BTC-USD', pct: 5 }, { t: 'MELI', pct: 5 }] },
+  { id: 'emergente', cat: 'alto', profile: 'arriesgado', name: 'Emergentes y cripto', by: 'Para los que se la juegan',
+    idea: 'Apuesta a los países que más crecen y a la cripto, con una base en EE.UU.',
+    mix: [{ t: 'VTI', pct: 35 }, { t: 'VWO', pct: 20 }, { t: 'BTC-USD', pct: 15 }, { t: 'MELI', pct: 10 }, { t: 'TSM', pct: 10 }, { t: 'ETH-USD', pct: 5 }, { t: 'VXUS', pct: 5 }] }
 ];
 
-/** Categorías del simulador (una por cartera modelo). */
-export const CATEGORIES = PORTFOLIOS.map((p) => ({ id: p.id, label: p.label }));
+/** Categorías del simulador. */
+export const CATEGORIES = [
+  { id: 'conservador', label: 'Conservador' },
+  { id: 'medio', label: 'Riesgo medio' },
+  { id: 'alto', label: 'Riesgo alto' }
+] as const;
 
 export const RISK_LABEL = ['', 'Bajo', 'Medio', 'Alto', 'Muy alto'] as const;
 /** Tope para proyectar: ninguna inversión crece al ritmo de su mejor década para siempre. */

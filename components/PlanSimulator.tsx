@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CATEGORIES, PORTFOLIOS, PROFILE_CAP, PROJECTION_CAP, RISK_LABEL, type Asset } from '@/lib/assets';
+import { ASSET_CLASS, CATEGORIES, PORTFOLIOS, PROFILE_CAP, PROJECTION_CAP, RISK_LABEL, type Asset } from '@/lib/assets';
+
+const CLASS_COLOR: Record<string, string> = { bonos: 'var(--celeste)', eeuu: 'var(--ink)', mundo: 'var(--celeste-ink)', oro: 'var(--resaltador)', inmuebles: '#B08B5A', materias: '#8A6F2E', empresa: 'var(--up)', cripto: 'var(--down)' };
 
 type Mix = { ticker: string; pct: number; por_que: string };
 type Plan = { perfil: keyof typeof PROFILE_CAP; objetivo_usd: number | null; mensual_usd: number | null; resumen: string; consejo: string; mix: Mix[]; ai: boolean };
@@ -113,6 +115,7 @@ export default function PlanSimulator({ assets }: { assets: Asset[] }) {
     const s: Record<string, number> = {};
     pf.mix.forEach((x) => { s[x.t] = Math.max(10, Math.round((monthlyTotal * x.pct) / 100 / 5) * 5); });
     setSel(s); setOrder(pf.mix.map((x) => x.t));
+    simRef.current?.querySelector('.sim-grid')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   };
   const sim = useMemo(() => {
     const proj: number[] = [], flat: number[] = [];
@@ -192,34 +195,26 @@ export default function PlanSimulator({ assets }: { assets: Asset[] }) {
           <div className="sim-cats" role="tablist" aria-label="Carteras modelo por nivel de riesgo">
             {CATEGORIES.map((c) => <button key={c.id} type="button" role="tab" aria-selected={cat === c.id} className="sim-cat" onClick={() => setCat(c.id)}>{c.label}</button>)}
           </div>
-          {(() => {
-            const pf = PORTFOLIOS.find((p) => p.id === cat)!;
-            return (
-              <div className="panel pf" role="tabpanel">
-                <p className="pf-idea">{pf.idea}</p>
-                <ul className="pf-list">
-                  {pf.mix.map((x) => {
-                    const a = A[x.t];
-                    if (!a) return null;
-                    return (
-                      <li key={x.t}>
-                        <button type="button" className="pf-item" aria-pressed={sel[x.t] != null} onClick={() => setAmount(x.t, sel[x.t] != null ? null : 100)}>
-                          <span className="pf-pct pl-num">{x.pct}%</span>
-                          <span className="pf-txt"><b>{a.name}</b><small>{x.role} · {a.why}</small></span>
-                          <span className="pf-rate pl-num">{a.rate >= 0 ? '+' : '−'}{Math.abs(a.rate).toLocaleString('es-AR')}%<small>por año</small></span>
-                          <span className="pf-add" aria-hidden="true">{sel[x.t] != null ? '✓' : '+'}</span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <div className="pf-foot">
-                  <button type="button" className="pl-btn primary" style={{ width: 'auto' }} onClick={() => loadPortfolio(pf.id)}>Cargar esta cartera con {money(monthlyTotal)} por mes{ARROW}</button>
-                  <span className="note">Tocá cada activo para sumarlo o sacarlo de a uno.</span>
-                </div>
-              </div>
-            );
-          })()}
+          <div className="pf-grid" role="tabpanel">
+            {PORTFOLIOS.filter((p) => p.cat === cat).map((pf) => {
+              const items = pf.mix.filter((x) => A[x.t]);
+              const exp = items.reduce((sum, x) => sum + Math.min(A[x.t].rate, PROJECTION_CAP) * (x.pct / 100), 0);
+              const active = items.length === rows.length && items.every((x) => sel[x.t] != null);
+              return (
+                <article key={pf.id} className={`pf-card${active ? ' on' : ''}`}>
+                  <header><b>{pf.name}</b><span>{pf.by}</span></header>
+                  <p>{pf.idea}</p>
+                  <div className="pf-bar" aria-hidden="true">{items.map((x) => <i key={x.t} style={{ width: `${x.pct}%`, background: CLASS_COLOR[ASSET_CLASS[x.t] ?? 'empresa'] }} title={`${A[x.t].name} ${x.pct}%`} />)}</div>
+                  <details>
+                    <summary><span>Qué hay adentro · {items.length} activos</span><span className="pl-num pf-exp">~{exp.toFixed(1).replace('.', ',')}% por año</span></summary>
+                    <ul>{items.map((x) => <li key={x.t}><i style={{ background: CLASS_COLOR[ASSET_CLASS[x.t] ?? 'empresa'] }} /><span>{A[x.t].name}</span><b className="pl-num">{x.pct}%</b></li>)}</ul>
+                  </details>
+                  <button type="button" className="pf-cta" onClick={() => loadPortfolio(pf.id)}>{active ? 'Cargada en el simulador' : 'Ponerla en el simulador'}{ARROW}</button>
+                </article>
+              );
+            })}
+          </div>
+          <p className="note">Al ponerla en el simulador, repartimos tus {money(monthlyTotal)} por mes según sus porcentajes. Después podés mover cada monto.</p>
         </div>
         <div className="sim-grid">
           <div className="sim-rows">
