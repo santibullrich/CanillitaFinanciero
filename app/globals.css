@@ -784,3 +784,8 @@ footer.foot .bajada{font-size:17px;color:var(--ground)}
 .pf-cta{justify-self:start;display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;border:0;background:var(--ink);color:var(--ground);font:600 14px var(--font-body);cursor:pointer}
 .pf-cta svg{width:16px;height:16px}
 .pf-card.on .pf-cta{background:var(--up);color:#fff}
+.gem-grid{display:grid;gap:12px}
+@media(min-width:720px){.gem-grid{grid-template-columns:1fr 1fr}}
+@media(min-width:1080px){.gem-grid{grid-template-columns:repeat(3,1fr)}}
+.gem-grid .gem{background:var(--ground-raised);border:1px solid var(--line);border-radius:var(--radius-md)}
+.gem-grid .gem:first-child{border-top:1px solid var(--line)}

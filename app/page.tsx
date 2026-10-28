@@ -12,6 +12,8 @@ import { THEMES } from '@/lib/themes';
 import { absPct, dir, fmtPct, mood, todayAR } from '@/lib/format';
 import { isOpen } from '@/lib/markets';
 import PlanSimulator from '@/components/PlanSimulator';
+import Gem from '@/components/Gem';
+import { joyitaCandidates } from '@/lib/joyitas';
 import { assetRates } from '@/lib/assetRates';
 
 export const revalidate = 120;
@@ -21,7 +23,9 @@ const toRow = (q: Row): RowData => ({ symbol: q.symbol, name: q.name, price: q.p
 const ARROW = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>;
 
 export default async function Home() {
-  const [w, themeQuotes, assets] = await Promise.all([worldSafe(), getQuotes(THEMES.flatMap((t) => t.symbols), 120).catch(() => []), assetRates()]);
+  const [w, themeQuotes, assets, joy] = await Promise.all([worldSafe(), getQuotes(THEMES.flatMap((t) => t.symbols), 120).catch(() => []), assetRates(), joyitaCandidates()]);
+  // Joyitas en la portada: las 4 con más consenso y las 2 castigadas con más potencial.
+  const gems = [...joy.rows.filter((r) => r.group === 'fuerte').slice(0, 4), ...joy.rows.filter((r) => r.group === 'castigada').slice(0, 2)];
   const tq = new Map(themeQuotes.map((q) => [q.symbol, q] as const));
   const geo = w.snaps.filter((s) => s.market.id !== 'cr');
   const best = [...geo].sort((a, b) => b.changePct - a.changePct)[0];
@@ -72,6 +76,13 @@ export default async function Home() {
           <section className="sec"><div className="sechead"><span className="pl-eyebrow">Subas del día</span><h2>Las que más suben</h2><p>Empresas grandes de todo el mundo a las que mejor les va hoy.</p></div><StockList rows={w.gainers.map(toRow)} empty="Hoy ninguna sube." /></section>
           <section className="sec"><div className="sechead"><span className="pl-eyebrow">Bajas del día</span><h2>Las que más bajan</h2><p>Una mala jornada no define a una empresa. Entrá para ver qué pasó.</p></div><StockList rows={w.losers.map(toRow)} empty="Hoy ninguna baja." /></section>
         </div>
+        {gems.length > 0 && (
+          <section className="sec" id="joyitas">
+            <div className="sechead"><span className="pl-eyebrow">Oportunidades según Wall Street</span><h2>Las joyitas de hoy</h2><p>Lo que más recomiendan los analistas de los grandes bancos y algunas que, después de caer, ellos ven baratas.</p></div>
+            <div className="gem-grid">{gems.map((c) => <Gem key={c.symbol} c={c} />)}</div>
+            <div><Link className="pl-btn quiet" href="/joyitas" style={{ width: 'auto', display: 'inline-flex' }}>Ver todas las joyitas en detalle{ARROW}</Link></div>
+          </section>
+        )}
         <section className="sec" id="temas">
           <div className="sechead"><span className="pl-eyebrow">Explorá por temas</span><h2>¿Qué te entusiasma?</h2><p>Empresas de todo el mundo agrupadas por la idea detrás de ellas. Las barritas muestran cuánto riesgo tiene cada tema.</p></div>
           <div className="pl-mosaic">

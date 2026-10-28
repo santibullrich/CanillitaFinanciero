@@ -4,9 +4,8 @@ import Link from 'next/link';
 import Header from '@/components/Header';
 import { themeInit } from '@/components/ThemeToggle';
 import { supabaseServer } from '@/lib/supabase/server';
-import { getFx, getQuotes } from '@/lib/yahoo';
+import { getCryptoTop, getFx, getQuotes } from '@/lib/yahoo';
 import { FxProvider } from '@/components/Fx';
-import { MARKETS } from '@/lib/markets';
 import { dir, fmtPct, nf } from '@/lib/format';
 
 export const metadata: Metadata = {
@@ -24,14 +23,24 @@ async function currentUser() {
   } catch { return null; }
 }
 
+/** Las 10 empresas más grandes del mundo por valor de mercado. */
+const TOP10 = ['NVDA', 'MSFT', 'AAPL', 'GOOGL', 'AMZN', 'AVGO', 'META', 'TSM', 'TSLA', 'BRK-B'];
+const STABLES = /^(USDT|USDC|DAI|USDE|FDUSD|TUSD|USDS|PYUSD|BUSD|USD1)-USD$/;
+
 async function Tape() {
-  const qs = await getQuotes(MARKETS.map((m) => m.index), 60).catch(() => []);
-  if (!qs.length) return null;
-  const names = Object.fromEntries(MARKETS.map((m) => [m.index, m.indexName]));
-  const items = qs.map((q) => (
-    <span className="pl-tick" key={q.symbol}><b>{(names[q.symbol] ?? q.symbol).toUpperCase()}</b><span>{nf(q.price > 9999 ? 0 : 2).format(q.price)}</span><span className={`pl-${dir(q.changePct)}`}>{fmtPct(q.changePct)}</span></span>
+  const [qs, crypto] = await Promise.all([getQuotes([...TOP10, 'ARS=X', 'EURARS=X'], 60).catch(() => []), getCryptoTop().catch(() => [])]);
+  const by = new Map(qs.map((q) => [q.symbol, q] as const));
+  const coins = crypto.filter((c) => !STABLES.test(c.symbol)).slice(0, 3);
+  const list = [
+    ...TOP10.map((t) => by.get(t)).filter(Boolean).map((q) => ({ k: q!.symbol, label: q!.symbol.replace('-B', '.B'), price: `US$ ${nf(q!.price >= 1000 ? 0 : 2).format(q!.price)}`, c: q!.changePct })),
+    ...[['ARS=X', 'DÓLAR'], ['EURARS=X', 'EURO']].map(([t, l]) => by.get(t) && { k: t, label: l, price: `$ ${nf(2).format(by.get(t)!.price)}`, c: by.get(t)!.changePct }).filter(Boolean) as { k: string; label: string; price: string; c: number }[],
+    ...coins.map((q) => ({ k: q.symbol, label: q.symbol.replace('-USD', ''), price: `US$ ${nf(q.price >= 1000 ? 0 : 2).format(q.price)}`, c: q.changePct }))
+  ];
+  if (!list.length) return null;
+  const items = list.map((x) => (
+    <span className="pl-tick" key={x.k}><b>{x.label}</b><span>{x.price}</span><span className={`pl-${dir(x.c)}`}>{fmtPct(x.c)}</span></span>
   ));
-  return <div className="pl-ticker" aria-label="Índices del mundo"><div className="pl-ticker-track">{items}<span aria-hidden="true" style={{ display: 'contents' }}>{items}</span></div></div>;
+  return <div className="pl-ticker" aria-label="Las 10 empresas más grandes del mundo, el dólar, el euro y las principales criptos"><div className="pl-ticker-track">{items}<span aria-hidden="true" style={{ display: 'contents' }}>{items}</span></div></div>;
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
