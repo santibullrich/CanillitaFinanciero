@@ -11,6 +11,8 @@ import { getQuotes } from '@/lib/yahoo';
 import { THEMES } from '@/lib/themes';
 import { absPct, dir, fmtPct, mood, todayAR } from '@/lib/format';
 import { isOpen } from '@/lib/markets';
+import PlanSimulator from '@/components/PlanSimulator';
+import { assetRates } from '@/lib/assetRates';
 
 export const revalidate = 120;
 export const maxDuration = 60;
@@ -19,7 +21,7 @@ const toRow = (q: Row): RowData => ({ symbol: q.symbol, name: q.name, price: q.p
 const ARROW = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>;
 
 export default async function Home() {
-  const [w, themeQuotes] = await Promise.all([worldSafe(), getQuotes(THEMES.flatMap((t) => t.symbols), 120).catch(() => [])]);
+  const [w, themeQuotes, assets] = await Promise.all([worldSafe(), getQuotes(THEMES.flatMap((t) => t.symbols), 120).catch(() => []), assetRates()]);
   const tq = new Map(themeQuotes.map((q) => [q.symbol, q] as const));
   const geo = w.snaps.filter((s) => s.market.id !== 'cr');
   const best = [...geo].sort((a, b) => b.changePct - a.changePct)[0];
@@ -85,15 +87,7 @@ export default async function Home() {
             })}
           </div>
         </section>
-        <section className="sec">
-          <div className="sechead"><span className="pl-eyebrow">¿Primera vez?</span><h2>El manual de Doña Rosa</h2><p>Invertir es más simple de lo que parece. Tres ideas para arrancar.</p></div>
-          <div className="tips">
-            <div className="tip"><div><h3>Empezá con poco</h3><p>No hace falta mucha plata. Lo importante es arrancar y entender cómo se mueve lo que compraste.</p></div></div>
-            <div className="tip"><div><h3>Repartí</h3><p>Con empresas de distintos países y rubros, un mal día de una no te arruina el mes.</p></div></div>
-            <div className="tip"><div><h3>Pensá en años</h3><p>Los precios suben y bajan todos los días. A largo plazo, lo que cuenta es que la empresa crezca.</p></div></div>
-          </div>
-          <div><Link className="pl-btn primary" href="/cartera">Armar mi cartera{ARROW}</Link></div>
-        </section>
+        <PlanSimulator assets={assets} />
       </main>
     </LiveProvider>
   );
