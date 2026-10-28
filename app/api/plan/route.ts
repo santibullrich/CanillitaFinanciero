@@ -19,8 +19,8 @@ function limited(ip: string) {
 const num = (s: string) => Number(s.replace(/\./g, '').replace(',', '.'));
 const MIXES: Record<Profile, PlanMix[]> = {
   conservador: [{ ticker: 'SPY', pct: 40, por_que: 'La base: las 500 más grandes de EE.UU.' }, { ticker: 'BND', pct: 30, por_que: 'Bonos para que las caídas duelan menos.' }, { ticker: 'VYM', pct: 20, por_que: 'Empresas que te pagan dividendos.' }, { ticker: 'GLD', pct: 10, por_que: 'Oro, por si el mundo se pone feo.' }],
-  moderado: [{ ticker: 'SPY', pct: 55, por_que: 'La base de todo.' }, { ticker: 'QQQ', pct: 20, por_que: 'Un empujón de tecnología.' }, { ticker: 'VT', pct: 20, por_que: 'El resto del mundo, para diversificar.' }, { ticker: 'BTC-USD', pct: 5, por_que: 'Una pizca de cripto.' }],
-  arriesgado: [{ ticker: 'QQQ', pct: 40, por_que: 'Tecnología como motor.' }, { ticker: 'SPY', pct: 25, por_que: 'Una base para no quedar a la deriva.' }, { ticker: 'MELI', pct: 15, por_que: 'Crecimiento en América Latina.' }, { ticker: 'NVDA', pct: 10, por_que: 'Inteligencia artificial.' }, { ticker: 'BTC-USD', pct: 10, por_que: 'Cripto, sabiendo que se mueve mucho.' }]
+  moderado: [{ ticker: 'SPY', pct: 55, por_que: 'La base: las 500 más grandes de EE.UU.' }, { ticker: 'BRK-B', pct: 15, por_que: 'La empresa de Buffett, muchos negocios en uno.' }, { ticker: 'MSFT', pct: 15, por_que: 'Tecnología sólida e inteligencia artificial.' }, { ticker: 'GLD', pct: 10, por_que: 'Oro para cuando hay miedo.' }, { ticker: 'BTC-USD', pct: 5, por_que: 'Una pizca de cripto.' }],
+  arriesgado: [{ ticker: 'SPY', pct: 30, por_que: 'Una base para no quedar a la deriva.' }, { ticker: 'NVDA', pct: 20, por_que: 'Los chips de la inteligencia artificial.' }, { ticker: 'MELI', pct: 20, por_que: 'Crecimiento en América Latina.' }, { ticker: 'AAPL', pct: 15, por_que: 'Una marca enorme que sigue creciendo.' }, { ticker: 'BTC-USD', pct: 15, por_que: 'Cripto, sabiendo que se mueve mucho.' }]
 };
 
 /** Respaldo sin IA: lee perfil, objetivo y monto mensual del texto. */

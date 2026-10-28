@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { PROFILE_CAP, PROJECTION_CAP, RISK_LABEL, type Asset } from '@/lib/assets';
+import { CATEGORIES, PROFILE_CAP, PROJECTION_CAP, RISK_LABEL, type Asset } from '@/lib/assets';
 
 type Mix = { ticker: string; pct: number; por_que: string };
 type Plan = { perfil: keyof typeof PROFILE_CAP; objetivo_usd: number | null; mensual_usd: number | null; resumen: string; consejo: string; mix: Mix[]; ai: boolean };
@@ -17,8 +17,17 @@ const ARROW = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeW
 const TRASH = <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" /></svg>;
 const KEY = 'canillita-sim-v1';
 
+type Hit = { symbol: string; name: string; exchange?: string; market?: string };
+
 export default function PlanSimulator({ assets }: { assets: Asset[] }) {
-  const A = useMemo(() => Object.fromEntries(assets.map((a) => [a.t, a])), [assets]);
+  const [extra, setExtra] = useState<Asset[]>([]);
+  const A = useMemo(() => Object.fromEntries([...assets, ...extra].map((a) => [a.t, a])), [assets, extra]);
+  const [cat, setCat] = useState<string>('medio');
+  const [query, setQuery] = useState('');
+  const [hits, setHits] = useState<Hit[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [adding, setAdding] = useState<string | null>(null);
+  const [searchMsg, setSearchMsg] = useState('');
   const [sel, setSel] = useState<Record<string, number>>({ SPY: 150, 'BTC-USD': 30 });
   const [order, setOrder] = useState<string[]>(['SPY', 'BTC-USD']);
   const [years, setYears] = useState(15);
@@ -29,10 +38,36 @@ export default function PlanSimulator({ assets }: { assets: Asset[] }) {
   const simRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
-    try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s?.order?.length) { setSel(s.sel); setOrder(s.order); setYears(s.years || 15); } } catch { /* sin guardado */ }
+    try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s?.order?.length) { setSel(s.sel); setOrder(s.order); setYears(s.years || 15); if (Array.isArray(s.extra)) setExtra(s.extra); } } catch { /* sin guardado */ }
     loaded.current = true;
   }, []);
-  useEffect(() => { if (loaded.current) try { localStorage.setItem(KEY, JSON.stringify({ sel, order, years })); } catch { /* sin guardado */ } }, [sel, order, years]);
+  useEffect(() => { if (loaded.current) try { localStorage.setItem(KEY, JSON.stringify({ sel, order, years, extra })); } catch { /* sin guardado */ } }, [sel, order, years, extra]);
+
+  /* ---------- Buscador: cualquier acción, ETF o cripto ---------- */
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) { setHits([]); return; }
+    const ctl = new AbortController();
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try { const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`, { signal: ctl.signal }); const j = await r.json(); setHits((j.results ?? []).slice(0, 6)); }
+      catch { /* cancelada */ }
+      setSearching(false);
+    }, 250);
+    return () => { clearTimeout(timer); ctl.abort(); };
+  }, [query]);
+  const addSymbol = async (h: Hit) => {
+    setSearchMsg('');
+    if (A[h.symbol]) { setAmount(h.symbol, sel[h.symbol] ?? 100); setQuery(''); setHits([]); return; }
+    setAdding(h.symbol);
+    try {
+      const r = await fetch(`/api/growth?symbol=${encodeURIComponent(h.symbol)}`);
+      const j = await r.json();
+      if (!r.ok) setSearchMsg(j.error ?? 'No pudimos sumar ese activo.');
+      else { setExtra((x) => [...x.filter((a) => a.t !== j.t), j]); setAmount(j.t, 100); setQuery(''); setHits([]); }
+    } catch { setSearchMsg('No pudimos sumar ese activo. Probá de nuevo.'); }
+    setAdding(null);
+  };
 
   const setAmount = (t: string, v: number | null) => {
     setSel((s) => { const n = { ...s }; if (v == null) delete n[t]; else n[t] = v; return n; });
@@ -127,8 +162,33 @@ export default function PlanSimulator({ assets }: { assets: Asset[] }) {
 
       <section className="sec" id="simulador" ref={simRef}>
         <div className="sechead"><span className="pl-eyebrow">Interés compuesto</span><h2>¿Cuánto podrías tener?</h2><p>Elegí en qué poner, cuánto por mes y por cuántos años. Te mostramos cuánto tendrías si crece como creció en los últimos 10 años, contra dejar la plata quieta.</p></div>
-        <div className="sim-chips" role="group" aria-label="Elegí en qué invertir">
-          {assets.map((a) => <button key={a.t} type="button" className="plan-chip" aria-pressed={sel[a.t] != null} onClick={() => setAmount(a.t, sel[a.t] != null ? null : 100)}>{a.name}</button>)}
+        <div className="sim-pick">
+          <div className="sim-search">
+            <label htmlFor="sim-q" className="pl-eyebrow">Buscá cualquier acción, ETF o cripto</label>
+            <input id="sim-q" type="search" autoComplete="off" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Tesla, Galicia, Solana, VOO…" aria-describedby="sim-q-msg" />
+            {(hits.length > 0 || searching) && (
+              <ul className="sim-hits" role="listbox" aria-label="Resultados">
+                {searching && !hits.length && <li className="sim-hit muted">Buscando…</li>}
+                {hits.map((h) => (
+                  <li key={h.symbol}>
+                    <button type="button" className="sim-hit" onClick={() => addSymbol(h)} disabled={adding != null}>
+                      <span><b>{h.name}</b><small>{h.symbol}{h.exchange ? ` · ${h.exchange}` : ''}</small></span>
+                      <span className="sim-hit-add">{adding === h.symbol ? 'Calculando…' : A[h.symbol] && sel[h.symbol] != null ? 'Ya está' : 'Sumar'}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <p id="sim-q-msg" className="note" aria-live="polite">{searchMsg}</p>
+          </div>
+          <div className="sim-cats" role="tablist" aria-label="Ideas por nivel de riesgo">
+            {CATEGORIES.map((c) => <button key={c.id} type="button" role="tab" aria-selected={cat === c.id} className="sim-cat" onClick={() => setCat(c.id)}>{c.label}</button>)}
+          </div>
+          <div className="sim-chips" role="group" aria-label="Ideas para sumar">
+            {assets.filter((a) => (CATEGORIES.find((c) => c.id === cat)?.risks as readonly number[]).includes(a.risk)).map((a) => (
+              <button key={a.t} type="button" className="plan-chip" aria-pressed={sel[a.t] != null} onClick={() => setAmount(a.t, sel[a.t] != null ? null : 100)} title={a.why}>{a.name}</button>
+            ))}
+          </div>
         </div>
         <div className="sim-grid">
           <div className="sim-rows">
@@ -137,14 +197,14 @@ export default function PlanSimulator({ assets }: { assets: Asset[] }) {
               return (
                 <div key={t} className="panel sim-row">
                   <div className="sim-row-h">
-                    <span><b>{a.name}</b><small>creció {a.rate >= 0 ? '' : '−'}{Math.abs(a.rate).toLocaleString('es-AR')}% por año{a.estimated ? ' (aprox.)' : ` en ${a.years} años`} · riesgo {RISK_LABEL[a.risk].toLowerCase()}</small></span>
+                    <span><b>{a.name}</b><small>{a.t.replace('-USD', '')} · {a.rate >= 0 ? 'creció' : 'cayó'} {Math.abs(a.rate).toLocaleString('es-AR')}% por año{a.estimated ? ' (aprox.)' : ` en ${a.years} ${a.years === 1 ? 'año' : 'años'}`} · riesgo {RISK_LABEL[a.risk].toLowerCase()}</small></span>
                     <b className="pl-num">{money(sel[t])}/mes</b>
                     <button type="button" className="sim-del" onClick={() => setAmount(t, null)} aria-label={`Sacar ${a.name} del simulador`}>{TRASH}</button>
                   </div>
                   <input type="range" min={0} max={1000} step={10} value={sel[t]} onChange={(e) => setAmount(t, Number(e.target.value))} aria-label={`Cuánto por mes en ${a.name}`} />
                 </div>
               );
-            }) : <p className="note">Tocá alguna de arriba para empezar.</p>}
+            }) : <p className="note">Buscá un activo o tocá una idea de arriba para empezar.</p>}
             <label className="panel sim-row" htmlFor="sim-years">
               <span className="sim-row-h"><b style={{ flex: 1 }}>Durante</b><b className="pl-num">{years} {years === 1 ? 'año' : 'años'}</b></span>
               <input id="sim-years" type="range" min={1} max={40} step={1} value={years} onChange={(e) => setYears(Number(e.target.value))} />
