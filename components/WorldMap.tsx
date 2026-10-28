@@ -27,11 +27,10 @@ export default function WorldMap({ pins }: { pins: Pin[] }) {
     const ctx = c.getContext('2d'); if (!ctx) return;
     const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
     let W = 0, H = 0, raf = 0; const t0 = performance.now();
-    const size = () => { const r = c.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); W = r.width; H = r.height; c.width = W * dpr; c.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
-    size();
-    const ro = new ResizeObserver(size); ro.observe(c);
+    const size = () => { const r = c.getBoundingClientRect(), dpr = Math.min(2, devicePixelRatio || 1); W = r.width; H = r.height; c.width = W * dpr; c.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); if (W && !raf) raf = requestAnimationFrame(draw); };
     const byId = Object.fromEntries(pins.map((p) => [p.id, p]));
     const draw = (now: number) => {
+      raf = 0;
       const t = (now - t0) / 1000, sx = W / MAP.cols, sy = H / MAP.rows, r = Math.max(0.9, Math.min(sx, sy) * 0.3);
       ctx.clearRect(0, 0, W, H);
       const reveal = reduce ? 2 : Math.min(2, (t / 1.4) * 1.15), scan = reduce ? -9 : ((t % 7) / 7) * (MAP.cols + 40) - 20;
@@ -46,9 +45,12 @@ export default function WorldMap({ pins }: { pins: Pin[] }) {
         ctx.fillStyle = `rgba(${R},${G},${B},${Math.min(1, 0.22 + inten * 0.6 + sc + tw + fresh * 0.7)})`;
         ctx.beginPath(); ctx.arc(d.x * sx, d.y * sy, r * (1 + inten * 0.35 + fresh * 0.6), 0, 6.283); ctx.fill();
       }
-      if (!reduce) raf = requestAnimationFrame(draw);
+      // En celulares el mapa está oculto (ancho 0): no se sigue dibujando hasta que vuelva a verse.
+      if (!reduce && W) raf = requestAnimationFrame(draw);
     };
-    raf = requestAnimationFrame(draw);
+    size();
+    const ro = new ResizeObserver(size); ro.observe(c);
+    if (!raf) raf = requestAnimationFrame(draw);
     return () => { cancelAnimationFrame(raf); ro.disconnect(); };
   }, [dots, pins]);
 

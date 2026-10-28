@@ -676,3 +676,7 @@ footer.foot .bajada{font-size:17px;color:var(--ground)}
 .mpin:hover,.mpin:focus-visible{z-index:5}
 @media(max-width:759px){.mpin.minor .lab{display:none}}
 @media(max-width:759px){.mpin .lab .flag{display:none}}
+
+/* En celulares no se muestra el mapa: la lista de mercados alcanza */
+.mob-only{display:none}
+@media(max-width:759px){.mapbox{display:none}.desk-only{display:none}.mob-only{display:inline}}

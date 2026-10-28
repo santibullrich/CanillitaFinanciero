@@ -53,7 +53,7 @@ export default async function Home() {
 
       <main className="wrap">
         <section className="sec" id="mundo">
-          <div className="sechead"><span className="pl-eyebrow">La vuelta al mundo</span><h2>Los mercados del mundo</h2><p>Tocá un punto del mapa o una fila para ver qué pasa en cada bolsa. En <Link className="pl-link" href="/explorar">Explorar</Link> tenés todas sus acciones.</p></div>
+          <div className="sechead"><span className="pl-eyebrow">La vuelta al mundo</span><h2>Los mercados del mundo</h2><p><span className="desk-only">Tocá un punto del mapa o una fila</span><span className="mob-only">Tocá una bolsa</span> para ver qué pasa en cada una. En <Link className="pl-link" href="/explorar">Explorar</Link> tenés todas sus acciones.</p></div>
           {pins.length > 0 && <WorldMap pins={pins} />}
           <div className="pl-list">
             {w.snaps.map((s) => (
