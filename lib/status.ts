@@ -3,6 +3,7 @@ import { fetchQuotes, getCryptoTop, getDaily, getFx, getGrades, getIntraday, get
 import { supabaseAdmin } from './supabase/admin';
 import { finnhubError, fhRatios } from './finnhub';
 import { googleEnabled } from './authProviders';
+import { marketMood, sentiEnabled, sentiError } from './sentisense';
 import { aiEnabled, askText, MODEL } from './ai';
 import { isoDaysAgo } from './technicals';
 
@@ -14,6 +15,7 @@ const ENV: [string, string][] = [
   ['SUPABASE_SERVICE_ROLE_KEY', 'Caché de explicaciones y límite del asesor'],
   ['ANTHROPIC_API_KEY', 'Explicaciones y asesor con IA'],
   ['FINNHUB_API_KEY', 'Ficha de empresa, ratios y analistas (Finnhub)'],
+  ['SENTISENSE_API_KEY', 'Redes, Reddit, políticos y joyitas (SentiSense, gratis en app.sentisense.ai/get-api-key)'],
   ['NEXT_PUBLIC_LOGO_DEV_TOKEN', 'Logos'],
   ['NEXT_PUBLIC_SITE_URL', 'Links de confirmación de email (por ejemplo https://canillitafinanciero.vercel.app)']
 ];
@@ -58,6 +60,7 @@ export async function runChecks() {
     check('Ficha de empresa y analistas', async () => { const p = await getProfile('AAPL'); const g = await getGrades('AAPL'); return { ok: !!p?.sector && !!g, detail: p?.sector ? `${p.sector}${g ? ` · ${g.strongBuy + g.buy} analistas dicen comprar` : ''}` : 'Sin datos' }; }),
     check('Ratios: P/E y dividendo (KO)', async () => { const r = await fhRatios('KO'); return { ok: !!r, detail: r ? `P/E ${r.pe?.toFixed(1) ?? '–'} · dividendo ${r.dividendYield?.toFixed(1) ?? '–'}%` : 'Sin datos' }; }),
     check('IA (Claude)', async () => { if (!aiEnabled()) return { ok: false, detail: 'Falta ANTHROPIC_API_KEY' }; const t0 = Date.now(); const t = await askText('Respondé solo con la palabra: listo', { model: MODEL, maxTokens: 10 }); return { ok: !!t, detail: `${MODEL} respondió "${t.slice(0, 20)}" · ${Date.now() - t0} ms` }; }),
+    check('SentiSense (humor del mercado)', async () => { if (!sentiEnabled()) return { ok: false, detail: 'Falta SENTISENSE_API_KEY' }; const m = await marketMood(); return { ok: !!m, detail: m ? `${m.phase} · ${Math.round(m.score ?? 0)} puntos` : sentiError ?? 'Sin datos' }; }),
     check('Noticias', async () => count((await getNews('AAPL', 3)).length)),
     check('Gráfico del día', async () => count((await getIntraday('AAPL', '5min', isoDaysAgo(5))).length, 'puntos')),
     check('Histórico diario', async () => count((await getDaily('AAPL', isoDaysAgo(40))).length, 'días')),

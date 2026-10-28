@@ -680,3 +680,27 @@ footer.foot .bajada{font-size:17px;color:var(--ground)}
 /* En celulares no se muestra el mapa: la lista de mercados alcanza */
 .mob-only{display:none}
 @media(max-width:759px){.mapbox{display:none}.desk-only{display:none}.mob-only{display:inline}}
+
+/* Joyitas: selección de Claude */
+.jgrid{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:760px){.jgrid{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1100px){.jgrid{grid-template-columns:repeat(3,1fr)}}
+.jpick{display:grid;gap:8px;align-content:start;color:inherit;text-decoration:none;border-top:4px solid var(--celeste)}
+.jpick.conservadora{border-top-color:var(--up)}
+.jpick.arriesgada{border-top-color:var(--down)}
+.jpick b{font-size:18px;line-height:1.25}
+.jpick p{margin:0;font-size:15px;color:var(--ink-muted)}
+.jpick .k{color:var(--ink);font-weight:600}
+.jpick:hover b{text-decoration:underline}
+
+/* Redes: termómetros */
+.gauges{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:760px){.gauges{grid-template-columns:1fr 1fr}}
+.gauge{display:grid;gap:10px}
+.gnum{display:flex;align-items:baseline;gap:12px}
+.gnum b{font-size:52px;line-height:1;font-weight:600;letter-spacing:-.04em}
+.gnum span{font-family:var(--font-display);font-weight:800;font-size:28px;text-transform:uppercase}
+.gbar{position:relative;height:10px;border-radius:999px;background:linear-gradient(90deg,var(--down),color-mix(in oklab,var(--down) 30%,var(--resaltador)),var(--resaltador),color-mix(in oklab,var(--up) 40%,var(--resaltador)),var(--up))}
+.gbar i{position:absolute;top:50%;width:18px;height:18px;margin:-9px 0 0 -9px;border-radius:50%;background:var(--ground-raised);border:3px solid var(--ink)}
+.gscale{display:flex;justify-content:space-between;font-family:var(--font-mono);font-size:11px;color:var(--ink-muted);text-transform:uppercase}
+.minih{font-family:var(--font-display);font-weight:800;font-size:22px;text-transform:uppercase;margin:0 0 8px}

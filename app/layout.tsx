@@ -52,14 +52,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <div className="dateline-band"><div className="wrap"><div className="pl-dateline"><span>{date} · BUENOS AIRES</span><span>Edición en vivo</span></div></div></div>
         <Tape />
         <nav className="subnav" aria-label="Secciones"><div className="wrap">
-          <Link href="/">Inicio</Link><Link href="/explorar">Explorar</Link><Link href="/mercado/cr">Cripto</Link><Link href="/mercado/ar">Argentina</Link><Link href="/mercado/us">Wall Street</Link><Link href="/joyitas">Joyitas</Link><Link href="/cartera">Mi cartera</Link>
+          <Link href="/">Inicio</Link><Link href="/explorar">Explorar</Link><Link href="/mercado/cr">Cripto</Link><Link href="/mercado/ar">Argentina</Link><Link href="/mercado/us">Wall Street</Link><Link href="/joyitas">Joyitas</Link><Link href="/redes">Redes</Link><Link href="/cartera">Mi cartera</Link>
         </div></nav>
         <div id="view">{children}</div>
         <footer className="foot"><div className="wrap">
           <span className="pl-wordmark"><i /><span className="stack"><b>Canillita</b><span>Financiero</span></span></span>
           <p className="bajada">Todas las noticias del mercado mundial, contadas para que las entiendan Don Carlos y Doña Rosa.</p>
           <p>Nada de lo que ves es un consejo de inversión. Antes de invertir, informate y elegí lo que tenga sentido para vos. Los precios pueden tener demora según la bolsa.</p>
-          <p>Datos de mercado: Yahoo Finance (pueden tener demora). Los precios se muestran en dólares al tipo de cambio del momento. <a href="https://logo.dev" target="_blank" rel="noopener noreferrer">Logos provistos por Logo.dev</a>.</p>
+          <p>Datos de mercado: Yahoo Finance (pueden tener demora), Finnhub, SentiSense y CoinGecko. Los precios se muestran en dólares al tipo de cambio del momento. <a href="https://logo.dev" target="_blank" rel="noopener noreferrer">Logos provistos por Logo.dev</a>.</p>
         </div></footer>
         </FxProvider>
       </body>
