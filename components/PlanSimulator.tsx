@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { CATEGORIES, PROFILE_CAP, PROJECTION_CAP, RISK_LABEL, type Asset } from '@/lib/assets';
+import { CATEGORIES, PORTFOLIOS, PROFILE_CAP, PROJECTION_CAP, RISK_LABEL, type Asset } from '@/lib/assets';
 
 type Mix = { ticker: string; pct: number; por_que: string };
 type Plan = { perfil: keyof typeof PROFILE_CAP; objetivo_usd: number | null; mensual_usd: number | null; resumen: string; consejo: string; mix: Mix[]; ai: boolean };
@@ -106,6 +106,14 @@ export default function PlanSimulator({ assets }: { assets: Asset[] }) {
 
   /* ---------- Simulador ---------- */
   const rows = order.filter((t) => sel[t] != null && A[t]);
+  const monthlyTotal = Math.max(100, rows.reduce((sum, t) => sum + sel[t], 0)) || 300;
+  const loadPortfolio = (id: string) => {
+    const pf = PORTFOLIOS.find((p) => p.id === id);
+    if (!pf) return;
+    const s: Record<string, number> = {};
+    pf.mix.forEach((x) => { s[x.t] = Math.max(10, Math.round((monthlyTotal * x.pct) / 100 / 5) * 5); });
+    setSel(s); setOrder(pf.mix.map((x) => x.t));
+  };
   const sim = useMemo(() => {
     const proj: number[] = [], flat: number[] = [];
     let max = 1;
@@ -181,14 +189,37 @@ export default function PlanSimulator({ assets }: { assets: Asset[] }) {
             )}
             <p id="sim-q-msg" className="note" aria-live="polite">{searchMsg}</p>
           </div>
-          <div className="sim-cats" role="tablist" aria-label="Ideas por nivel de riesgo">
+          <div className="sim-cats" role="tablist" aria-label="Carteras modelo por nivel de riesgo">
             {CATEGORIES.map((c) => <button key={c.id} type="button" role="tab" aria-selected={cat === c.id} className="sim-cat" onClick={() => setCat(c.id)}>{c.label}</button>)}
           </div>
-          <div className="sim-chips" role="group" aria-label="Ideas para sumar">
-            {assets.filter((a) => (CATEGORIES.find((c) => c.id === cat)?.risks as readonly number[]).includes(a.risk)).map((a) => (
-              <button key={a.t} type="button" className="plan-chip" aria-pressed={sel[a.t] != null} onClick={() => setAmount(a.t, sel[a.t] != null ? null : 100)} title={a.why}>{a.name}</button>
-            ))}
-          </div>
+          {(() => {
+            const pf = PORTFOLIOS.find((p) => p.id === cat)!;
+            return (
+              <div className="panel pf" role="tabpanel">
+                <p className="pf-idea">{pf.idea}</p>
+                <ul className="pf-list">
+                  {pf.mix.map((x) => {
+                    const a = A[x.t];
+                    if (!a) return null;
+                    return (
+                      <li key={x.t}>
+                        <button type="button" className="pf-item" aria-pressed={sel[x.t] != null} onClick={() => setAmount(x.t, sel[x.t] != null ? null : 100)}>
+                          <span className="pf-pct pl-num">{x.pct}%</span>
+                          <span className="pf-txt"><b>{a.name}</b><small>{x.role} · {a.why}</small></span>
+                          <span className="pf-rate pl-num">{a.rate >= 0 ? '+' : '−'}{Math.abs(a.rate).toLocaleString('es-AR')}%<small>por año</small></span>
+                          <span className="pf-add" aria-hidden="true">{sel[x.t] != null ? '✓' : '+'}</span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="pf-foot">
+                  <button type="button" className="pl-btn primary" style={{ width: 'auto' }} onClick={() => loadPortfolio(pf.id)}>Cargar esta cartera con {money(monthlyTotal)} por mes{ARROW}</button>
+                  <span className="note">Tocá cada activo para sumarlo o sacarlo de a uno.</span>
+                </div>
+              </div>
+            );
+          })()}
         </div>
         <div className="sim-grid">
           <div className="sim-rows">
@@ -201,7 +232,7 @@ export default function PlanSimulator({ assets }: { assets: Asset[] }) {
                     <b className="pl-num">{money(sel[t])}/mes</b>
                     <button type="button" className="sim-del" onClick={() => setAmount(t, null)} aria-label={`Sacar ${a.name} del simulador`}>{TRASH}</button>
                   </div>
-                  <input type="range" min={0} max={1000} step={10} value={sel[t]} onChange={(e) => setAmount(t, Number(e.target.value))} aria-label={`Cuánto por mes en ${a.name}`} />
+                  <input type="range" min={0} max={1000} step={5} value={sel[t]} onChange={(e) => setAmount(t, Number(e.target.value))} aria-label={`Cuánto por mes en ${a.name}`} />
                 </div>
               );
             }) : <p className="note">Buscá un activo o tocá una idea de arriba para empezar.</p>}

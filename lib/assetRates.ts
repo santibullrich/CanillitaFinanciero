@@ -1,7 +1,7 @@
 import 'server-only';
 import { unstable_cache } from 'next/cache';
-import { getDaily, getQuote } from './yahoo';
-import { isoDaysAgo, technicals } from './technicals';
+import { getDaily, getQuote, getWeeklyTotalReturn } from './yahoo';
+import { isoDaysAgo } from './technicals';
 import { marketOfSymbol } from './markets';
 import { ASSET_LIST, type Asset } from './assets';
 
@@ -11,12 +11,12 @@ export type Growth = { rate: number; years: number; risk: 1 | 2 | 3 | 4 };
 const riskFromVol = (v: number | null): Growth['risk'] => (v == null ? 2 : v < 18 ? 1 : v < 28 ? 2 : v < 45 ? 3 : 4);
 
 /**
- * Crecimiento anual compuesto en dólares de los últimos 10 años (o desde que cotiza),
- * con los cierres diarios de Yahoo Finance. Si cotiza en otra moneda, se descuenta lo que
- * esa moneda perdió o ganó contra el dólar en el mismo período.
+ * Rendimiento total anual compuesto en dólares de los últimos 10 años (o desde que cotiza):
+ * precio más dividendos e intereses reinvertidos, con datos semanales de Yahoo Finance.
+ * Si cotiza en otra moneda, se descuenta lo que esa moneda perdió o ganó contra el dólar.
  */
 async function computeGrowth(symbol: string, currency = 'USD'): Promise<Growth | null> {
-  const pts = await getDaily(symbol, isoDaysAgo(3653));
+  const pts = await getWeeklyTotalReturn(symbol, isoDaysAgo(3653));
   const first = pts[0], last = pts[pts.length - 1];
   if (!first || !last || first.p <= 0) return null;
   const days = (new Date(last.t).getTime() - new Date(first.t).getTime()) / 864e5;
@@ -28,15 +28,18 @@ async function computeGrowth(symbol: string, currency = 'USD'): Promise<Growth |
     if (!f0 || !f1) return null;
     ratio = ratio / (f1 / f0); // unidades de moneda por dólar: si sube, la moneda se devaluó
   }
-  const t = technicals(pts.slice(-260), last.p);
-  return { rate: Math.round((Math.pow(ratio, 365.25 / days) - 1) * 1000) / 10, years: Math.max(1, Math.round(days / 365.25)), risk: riskFromVol(t.volAnnual) };
+  // Volatilidad anual del último año con los retornos semanales.
+  const w = pts.slice(-53), rets = w.slice(1).map((x, i) => Math.log(x.p / w[i].p));
+  const mean = rets.reduce((a, b) => a + b, 0) / (rets.length || 1);
+  const vol = rets.length > 10 ? Math.sqrt(rets.reduce((a, b) => a + (b - mean) ** 2, 0) / (rets.length - 1)) * Math.sqrt(52) * 100 : null;
+  return { rate: Math.round((Math.pow(ratio, 365.25 / days) - 1) * 1000) / 10, years: Math.max(1, Math.round(days / 365.25)), risk: riskFromVol(vol) };
 }
 
 const growthC = unstable_cache(async (symbol: string, currency: string) => {
   const g = await computeGrowth(symbol, currency);
   if (!g) throw new Error(`Sin histórico ${symbol}`); // no se guarda: se reintenta
   return g;
-}, ['growth-v1'], { revalidate: 86400 });
+}, ['growth-v2'], { revalidate: 86400 });
 
 /** Cualquier activo que encuentre el buscador. */
 export async function growthOf(symbol: string): Promise<(Asset & { currency: string }) | null> {
@@ -61,7 +64,7 @@ const ratesC = unstable_cache(async (): Promise<Asset[]> => {
   }
   if (out.every((a) => a.estimated)) throw new Error('Sin históricos'); // no se guarda: se reintenta
   return out;
-}, ['asset-rates-v2'], { revalidate: 86400 });
+}, ['asset-rates-v3'], { revalidate: 86400 });
 
 export async function assetRates(): Promise<Asset[]> {
   try { return await ratesC(); }

@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import Flag from '@/components/Flag';
 import Logo from '@/components/Logo';
-import JoyitasIA from '@/components/JoyitasIA';
 import { joyitaCandidates, type Candidate } from '@/lib/joyitas';
 import { marketOfSymbol } from '@/lib/markets';
 import { nf, symbolPath } from '@/lib/format';
@@ -40,14 +39,10 @@ export default async function Joyitas() {
       <section className="pl-atmo heroband"><div className="pl-hero"><div className="hero-copy pl-reveal" style={{ maxWidth: 1140, margin: '0 auto', width: '100%' }}>
         <Link className="back" href="/">← Inicio</Link><span className="pl-eyebrow">Oportunidades según Wall Street</span>
         <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'clamp(46px,10vw,84px)', lineHeight: 0.92 }}>Las <mark className="pl-hl">joyitas</mark> de hoy</h1>
-        <p className="pl-lede">Buscamos las empresas que más recomiendan los analistas de los grandes bancos de inversión y las que, después de caer, ellos ven baratas. Después, la IA de Claude cruza esos datos con los números de cada empresa, su gráfico y lo que se dice en redes, y elige seis.</p>
+        <p className="pl-lede">Buscamos las empresas que más recomiendan los analistas de los grandes bancos de inversión y las que, después de caer, ellos ven baratas.</p>
       </div></div></section>
 
       <main className="wrap">
-        <section className="sec">
-          <div className="sechead"><span className="pl-eyebrow">Elegidas con IA</span><h2>La selección de Claude</h2><p>Una para cada tipo de inversor: conservadora, moderada y arriesgada.</p></div>
-          <JoyitasIA />
-        </section>
 
         <section className="sec">
           <div className="sechead"><span className="pl-eyebrow">Consenso fuerte</span><h2>Las que más recomiendan</h2><p>Empresas grandes que siguen al menos 10 analistas, donde 3 de cada 4 o más dicen “comprar”, ordenadas por cuánto creen que puede subir.</p></div>

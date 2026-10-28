@@ -248,6 +248,24 @@ const intraHour = unstable_cache((symbol: string, from: string) => chartSeries(s
 export async function getDaily(symbol: string, from: string): Promise<Point[]> {
   try { return await dailyCached(symbol, from); } catch (e) { logError(`chart 1d ${symbol}`, e); return []; }
 }
+/**
+ * Precio semanal ajustado por dividendos e intereses (rendimiento total), desde una fecha.
+ * Sirve para comparar en serio acciones que reparten dividendos y fondos de bonos.
+ */
+const weeklyAdjC = unstable_cache(async (symbol: string, from: string): Promise<Point[]> => {
+  const p1 = Math.floor(new Date(from + 'T00:00:00Z').getTime() / 1000), p2 = Math.floor(Date.now() / 1000);
+  const j = await yjson(`/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${p1}&period2=${p2}&interval=1wk&events=div,split&includePrePost=false`);
+  const r = j?.chart?.result?.[0];
+  const ts: number[] = r?.timestamp ?? [];
+  const adj: (number | null)[] = r?.indicators?.adjclose?.[0]?.adjclose ?? r?.indicators?.quote?.[0]?.close ?? [];
+  const out = ts.map((t, i) => ({ t: iso(t), p: adj[i] == null ? NaN : Number(adj[i]) })).filter((x) => isFinite(x.p) && x.p > 0);
+  if (out.length < 30) throw new Error(`Histórico corto ${symbol}`);
+  return out;
+}, ['weekly-adj-v1'], { revalidate: 86400 });
+export async function getWeeklyTotalReturn(symbol: string, from: string): Promise<Point[]> {
+  try { return await weeklyAdjC(symbol, from); } catch (e) { logError(`chart 1wk ${symbol}`, e); return []; }
+}
+
 /** Precios intradiarios cada 5 minutos o cada hora. */
 export async function getIntraday(symbol: string, interval: '5min' | '1hour', from: string): Promise<Point[]> {
   try { return await (interval === '5min' ? intraFast : intraHour)(symbol, from); } catch (e) { logError(`chart ${interval} ${symbol}`, e); return []; }
