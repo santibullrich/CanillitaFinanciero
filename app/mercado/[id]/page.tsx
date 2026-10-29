@@ -40,6 +40,7 @@ export default async function MarketPage({ params }: { params: { id: string } })
           <span className="pl-eyebrow eyeflag"><Flag id={m.id} size="lg" />{m.nick} · {m.indexName} · {m.id === 'cr' ? 'abierto 24/7' : isOpen(m) ? 'abierto ahora' : 'cerrado'}</span>
           <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(52px,12vw,96px)', lineHeight: 0.9 }}>{m.name}</h1>
           <div className="price-row">{index && <span className="pl-num" style={{ fontSize: 30, fontWeight: 600 }}>{nf(index.price > 9999 ? 0 : 2).format(index.price)}</span>}<Badge c={c} lg /><span className="mood">{mood(c).word}</span></div>
+          {s.estimated && <p className="note">El {m.indexName} se publica con unos minutos de demora: mientras tanto, estimamos el día con sus principales acciones.</p>}
           <p className="pl-lede">{summary}</p>
           <p className="pl-lede" style={{ fontSize: 16 }}>{m.context}</p>
         </div>

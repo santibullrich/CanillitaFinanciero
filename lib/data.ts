@@ -21,6 +21,8 @@ export type MarketSnap = {
   ok: boolean;
   /** true cuando no hay lista completa de la bolsa y se usan solo sus empresas más grandes. */
   partial: boolean;
+  /** true cuando el índice todavía no se actualizó (viene con demora) y la variación se estima con sus principales acciones. */
+  estimated: boolean;
 };
 
 const plausible = (q: Quote) => q.price > 0 && Math.abs(q.changePct) < 80;
@@ -80,10 +82,15 @@ export function snapshotFrom(m: Market, data: MarketRows, fx: Record<string, num
   const big = rows.filter((q) => !q.marketCap || q.marketCap * rate >= m.minCap);
   const sorted = [...big].sort((a, b) => b.changePct - a.changePct);
   const capChange = cap - delta > 0 ? (delta / (cap - delta)) * 100 : 0;
+  // El índice llega con demora (Yahoo publica el Merval ~20 minutos tarde): si marca 0% pero sus
+  // principales acciones ya se mueven, se estima el día con el promedio de las 15 más grandes.
+  const top = rows.slice(0, 15), moving = top.filter((q) => Math.abs(q.changePct) >= 0.05).length;
+  const stale = m.id !== 'cr' && !!index && Math.abs(index.changePct) < 0.005 && moving >= 5;
+  const estChange = stale ? top.reduce((a, q) => a + q.changePct, 0) / top.length : 0;
   return {
     market: m,
     index,
-    changePct: m.id === 'cr' ? capChange : index?.changePct ?? capChange,
+    changePct: m.id === 'cr' ? capChange : stale ? Math.round(estChange * 100) / 100 : index?.changePct ?? capChange,
     capUsd: cap,
     capDeltaUsd: delta,
     count: rows.length,
@@ -92,7 +99,8 @@ export function snapshotFrom(m: Market, data: MarketRows, fx: Record<string, num
     losers: sorted.filter((q) => q.changePct < 0).reverse().slice(0, 10),
     largest: rows.slice(0, 15),
     ok: rows.length > 0,
-    partial: data.partial
+    partial: data.partial,
+    estimated: stale
   };
 }
 
@@ -104,7 +112,7 @@ export const marketSnapshotCached = unstable_cache(async (id: string) => {
   const snap = snapshotFrom(m, rows, fx, index);
   if (!snap.ok && !index) throw new Error(`Sin datos para ${m.name}`);
   return snap;
-}, ['market-snap-y2'], { revalidate: 60 });
+}, ['market-snap-y3'], { revalidate: 60 });
 
 /** Igual que marketSnapshotCached pero nunca falla: si no hay datos devuelve una foto vacía. */
 export async function marketSnapshotSafe(id: string): Promise<MarketSnap> {
@@ -129,7 +137,7 @@ export const worldCached = unstable_cache(async () => {
     gainers: stocks.filter((q) => q.changePct > 0).sort((a, b) => b.changePct - a.changePct).slice(0, 8),
     losers: stocks.filter((q) => q.changePct < 0).sort((a, b) => a.changePct - b.changePct).slice(0, 8)
   };
-}, ['world-y2'], { revalidate: 60 });
+}, ['world-y3'], { revalidate: 60 });
 
 export type World = Awaited<ReturnType<typeof worldCached>>;
 /** Nunca falla: si el proveedor no responde, devuelve un mundo vacío y la página muestra un aviso. */
