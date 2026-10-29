@@ -21,7 +21,7 @@ export async function POST(req: Request) {
   const { data, error } = await db.from('positions').insert({ user_id: user.id, symbol, name, currency, quantity, buy_price }).select('id').single();
   if (error) {
     console.error('[Cartera] alta:', error.code, error.message);
-    const hint = error.code === '42P01' ? 'Falta la tabla de posiciones en Supabase (ejecutá supabase/schema.sql).'
+    const hint = error.code === '42P01' || error.code === 'PGRST205' ? 'Falta la tabla de posiciones en Supabase (ejecutá supabase/schema.sql).'
       : error.code === '23503' ? 'Tu usuario no figura en la base. Cerrá sesión y volvé a ingresar.'
       : error.code === '42501' ? 'La base no deja guardar (permisos). Revisá las políticas de la tabla positions.'
       : 'No pudimos guardar la posición.';

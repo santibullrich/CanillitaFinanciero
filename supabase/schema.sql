@@ -66,3 +66,6 @@ create policy "explicaciones visibles" on public.ai_explanations
 drop policy if exists "consultas propias" on public.advisor_runs;
 create policy "consultas propias" on public.advisor_runs
   for select to authenticated using (auth.uid() = user_id);
+
+-- Que la API de Supabase vea las tablas nuevas enseguida.
+notify pgrst, 'reload schema';

@@ -91,7 +91,7 @@ export async function runChecks() {
   else {
     for (const t of ['positions', 'watchlist', 'ai_explanations', 'advisor_runs']) {
       const { error } = await admin.from(t).select('*', { count: 'exact', head: true });
-      db.push(error ? { name: `Tabla ${t}`, ok: false, detail: error.message, fix: 'Ejecutá supabase/schema.sql en Supabase → SQL Editor.' } : { name: `Tabla ${t}`, ok: true, detail: 'Existe' });
+      db.push(error ? { name: `Tabla ${t}`, ok: false, detail: error.message, fix: 'Ejecutá supabase/schema.sql en Supabase → SQL Editor. Si la tabla ya existe, corré también: NOTIFY pgrst, \'reload schema\';' } : { name: `Tabla ${t}`, ok: true, detail: 'Existe' });
     }
   }
   const g = await googleEnabled();
