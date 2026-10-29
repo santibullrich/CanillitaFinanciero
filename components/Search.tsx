@@ -67,7 +67,7 @@ export default function Search({ onPick, placeholder = '¿Qué empresa te intere
           onChange={(e) => setQ(e.target.value)} onFocus={() => hits.length && setOpen(true)}
           onKeyDown={(e) => {
             if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (hits.length) setSel((s) => (s + (e.key === 'ArrowDown' ? 1 : -1) + hits.length) % hits.length); }
-            else if (e.key === 'Enter' && hits[sel]) { e.preventDefault(); pick(hits[sel]); }
+            else if (e.key === 'Enter') { if (hits[sel]) { e.preventDefault(); pick(hits[sel]); } else if (onPick) e.preventDefault(); }
             else if (e.key === 'Escape') setOpen(false);
           }} />
         {!compact && <kbd>/</kbd>}

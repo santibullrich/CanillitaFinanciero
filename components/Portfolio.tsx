@@ -18,7 +18,8 @@ type Picked = { symbol: string; name: string; market: string; currency: string }
 const ARROW = <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>;
 
 export default function Portfolio({ userId, nombre, preset }: { userId: string; nombre: string; preset?: string }) {
-  const sb = supabaseBrowser();
+  const sb = useMemo(() => supabaseBrowser(), []);
+  const [saving, setSaving] = useState(false);
   const [positions, setPositions] = useState<Position[] | null>(null);
   const [watch, setWatch] = useState<string[]>([]);
   const [quotes, setQuotes] = useState<Record<string, Q>>({});
@@ -94,8 +95,13 @@ export default function Portfolio({ userId, nombre, preset }: { userId: string; 
     if (!picked) return setFormErr('Buscá y elegí una acción o cripto.');
     if (!(q > 0)) return setFormErr('Poné cuántas tenés (un número mayor a cero).');
     if (!(p > 0)) return setFormErr('Poné el precio al que compraste (mayor a cero).');
-    const { error } = await sb.from('positions').insert({ user_id: userId, symbol: picked.symbol, name: picked.name, currency: picked.currency, quantity: q, buy_price: p });
-    if (error) return setFormErr('No pudimos guardar la posición. Probá de nuevo.');
+    setSaving(true);
+    try {
+      const r = await fetch('/api/positions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ symbol: picked.symbol, name: picked.name, currency: picked.currency, quantity: q, buy_price: p }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) { setSaving(false); return setFormErr(j.error ?? 'No pudimos guardar la posición. Probá de nuevo.'); }
+    } catch { setSaving(false); return setFormErr('Sin conexión. Probá de nuevo.'); }
+    setSaving(false);
     setQty(''); setPicked(null); setPrice('');
     load();
   };
@@ -103,8 +109,8 @@ export default function Portfolio({ userId, nombre, preset }: { userId: string; 
   const remove = async (id: string) => {
     if (confirm !== id) return setConfirm(id);
     setConfirm(null);
-    const { error } = await sb.from('positions').delete().eq('id', id);
-    if (!error) setPositions((ps) => (ps ?? []).filter((p) => p.id !== id));
+    const r = await fetch(`/api/positions?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => null);
+    if (r?.ok) setPositions((ps) => (ps ?? []).filter((p) => p.id !== id));
   };
 
   const calc = useMemo(() => {
@@ -195,7 +201,7 @@ export default function Portfolio({ userId, nombre, preset }: { userId: string; 
               <label className="field"><span>Precio de compra {picked && <em>en {SYM[picked.currency] ?? picked.currency}</em>}</span><input inputMode="decimal" value={price} onChange={(e) => { setPrice(e.target.value); setFormErr(''); }} /></label>
             </div>
             {formErr && <p className="err" role="alert">{formErr}</p>}
-            <div><button className="pl-btn primary" type="submit">Agregar a mi cartera{ARROW}</button></div>
+            <div><button className="pl-btn primary" type="submit" disabled={saving}>{saving ? 'Guardando…' : 'Agregar a mi cartera'}{ARROW}</button></div>
           </form>
         </section>
 
