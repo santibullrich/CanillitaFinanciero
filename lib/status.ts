@@ -1,6 +1,8 @@
 import 'server-only';
-import { fetchQuotes, getCryptoTop, getDaily, getFx, getGrades, getIntraday, getNews, getProfile, search, getDayMovers, getMarketCaps, lastError } from './yahoo';
+import { data912Info, fetchQuotes, getCryptoTop, getDaily, getFx, getGrades, getIntraday, getNews, getProfile, search, getDayMovers, getMarketCaps, lastError } from './yahoo';
 import { supabaseAdmin } from './supabase/admin';
+import { TOP } from './topSymbols';
+import { marketSnapshotSafe } from './data';
 import { finnhubError, fhRatios } from './finnhub';
 import { googleEnabled } from './authProviders';
 import { marketMood, sentiEnabled, sentiError } from './sentisense';
@@ -52,6 +54,8 @@ export async function runChecks() {
   const data: Check[] = await Promise.all([
     check('Cotización (AAPL)', async () => { const q = await fetchQuotes(['AAPL']); return q[0] ? { ok: true, detail: `US$ ${q[0].price} · ${q[0].changePct.toFixed(2)}% hoy` } : count(0); }),
     check('Acciones de varias bolsas', async () => count((await fetchQuotes(['GGAL.BA', '7203.T', 'PETR4.SA', 'SAP.DE', 'SHEL.L'])).length, 'de 5 cotizaciones')),
+    check('Acciones argentinas (Yahoo + data912)', async () => { const syms = TOP.ar; const q = await fetchQuotes(syms); const fromYahoo = q.filter((x) => x.name !== x.symbol.replace(/\.BA$/, '')).length; return { ok: q.length >= syms.length / 2, detail: `${q.length} de ${syms.length} (${fromYahoo} de Yahoo, ${q.length - fromYahoo} de data912)${data912Info ? ` · data912: ${data912Info.count} filas, campos ${data912Info.keys.join(', ')}${data912Info.error ? ' · ' + data912Info.error : ''}` : ''}` }; }),
+    check('Mercado Argentina en la app', async () => { const s = await marketSnapshotSafe('ar'); return { ok: s.count > 0 && !!s.index, detail: `${s.count} acciones · Merval ${s.index ? `${s.index.price.toFixed(0)} (${s.index.changePct.toFixed(2)}%)` : 'sin dato'} · ${s.gainers.length} suben, ${s.losers.length} bajan` }; }),
     check('Índices (S&P 500, Merval)', async () => count((await fetchQuotes(['^GSPC', '^MERV'])).length, 'de 2 índices')),
     check('Cripto (CoinGecko)', async () => count((await getCryptoTop()).length, 'monedas')),
     check('Buscador', async () => count((await search('galicia')).length)),

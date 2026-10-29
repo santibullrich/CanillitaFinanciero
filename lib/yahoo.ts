@@ -150,10 +150,47 @@ const capsCached = unstable_cache(async (key: string): Promise<Record<string, nu
 export async function getMarketCaps(symbols: string[]): Promise<Record<string, number>> {
   const s = Array.from(new Set(symbols.filter((x) => x && !/-USD$/.test(x)))).sort();
   if (!s.length) return {};
-  try { return await capsCached(s.join(',')); } catch (e) { logError('valor de mercado (yahoo-finance2)', e); return {}; }
+  if (Date.now() < capsBlockedUntil) return {};
+  try { return await capsCached(s.join(',')); } catch (e) { capsBlockedUntil = Date.now() + 600_000; logError('valor de mercado (yahoo-finance2)', e); return {}; }
 }
+// Si Yahoo bloquea los valores de mercado (429 desde Vercel), no se reintenta por 10 minutos: así no frena las listas.
+let capsBlockedUntil = 0;
 
 /** Pide cotizaciones: cripto a CoinGecko, el resto a Yahoo (de a 20, y de a una lo que falte). */
+/* ---------- Respaldo argentino: data912 (panel de BYMA, gratis, sin clave) ---------- */
+export let data912Info: { count: number; keys: string[]; error?: string } | null = null;
+const data912C = unstable_cache(async (): Promise<Record<string, { price: number; changePct: number }>> => {
+  const out: Record<string, { price: number; changePct: number }> = {};
+  for (const path of ['/live/arg_stocks', '/live/arg_general']) {
+    try {
+      const r = await fetch('https://data912.com' + path, { headers: { Accept: 'application/json', 'User-Agent': UA }, cache: 'no-store' });
+      if (!r.ok) continue;
+      const arr: any[] = await r.json();
+      for (const x of Array.isArray(arr) ? arr : []) {
+        const sym = String(x.symbol ?? x.ticker ?? '').toUpperCase();
+        const price = num(x.c ?? x.last ?? x.close ?? x.px_last);
+        if (!sym || !price) continue;
+        out[sym] = { price, changePct: num(x.pct_change ?? x.change_pct ?? x.pct) ?? 0 };
+      }
+      if (!data912Info && arr?.[0]) data912Info = { count: arr.length, keys: Object.keys(arr[0]).slice(0, 12) };
+    } catch (e: any) { data912Info = { count: 0, keys: [], error: String(e?.message ?? e).slice(0, 120) }; }
+  }
+  if (!Object.keys(out).length) throw new Error('data912 vacío');
+  return out;
+}, ['data912-v1'], { revalidate: 60 });
+
+async function data912Quotes(symbols: string[]): Promise<Quote[]> {
+  if (!symbols.length) return [];
+  const panel = await data912C().catch((e) => { logError('data912', e); return null; });
+  if (!panel) return [];
+  return symbols.flatMap((s) => {
+    const x = panel[s.replace(/\.BA$/, '')];
+    if (!x) return [];
+    const prev = x.changePct ? x.price / (1 + x.changePct / 100) : x.price;
+    return [{ symbol: s, name: s.replace(/\.BA$/, ''), price: x.price, change: x.price - prev, changePct: x.changePct, previousClose: prev, open: null, dayLow: null, dayHigh: null, yearLow: null, yearHigh: null, volume: null, marketCap: null, avg50: null, avg200: null, exchange: 'BUE', currency: 'ARS' }];
+  });
+}
+
 export async function fetchQuotes(symbols: string[]): Promise<Quote[]> {
   const crypto = symbols.filter((s) => /-USD$/.test(s));
   const rest = symbols.filter((s) => !/-USD$/.test(s));
@@ -170,6 +207,9 @@ export async function fetchQuotes(symbols: string[]): Promise<Quote[]> {
       const r = await Promise.all(missing.slice(i, i + 5).map(chartQuote));
       for (const q of r) if (q) got.push(q);
     }
+    // Acciones de Buenos Aires que Yahoo no devolvió: se completan con data912.
+    const have2 = new Set(got.map((q) => q.symbol));
+    got.push(...(await data912Quotes(rest.filter((s) => /\.BA$/.test(s) && !have2.has(s)))));
     out.push(...got);
   }
   return out.filter((q) => q.price > 0);
